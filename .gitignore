@@ -1,0 +1,50 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+.idea/
+.vscode/
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/feature_store/*
+!data/feature_store/.gitkeep
+data/historical/*
+!data/historical/.gitkeep
+data/predictions/*
+!data/predictions/.gitkeep
+ml/models/*
+!ml/models/.gitkeep
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# ML datasets and generated snapshots
+ml/data/raw/*
+!ml/data/raw/.gitkeep
+ml/data/snapshots/
+
+# Generated ML evaluation outputs
+hybrid_model_predictions.csv
+monthly_backtest_results.csv
+random_forest_backtest_results.csv
+ridge_forest_monthly_comparison.csv
+fare_model_comparison_v2.csv
+log_model_error_analysis.csv
+
+# Python package/build artifacts
+*.egg-info/
+build/

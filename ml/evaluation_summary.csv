@@ -1,0 +1,4 @@
+model,average_monthly_MAE_EUR,average_monthly_RMSE_EUR,months_evaluated
+Log-Ridge,68.17813838318425,93.92012146110349,4
+Random Forest,69.80559007808482,93.19463006562881,4
+Median Baseline,87.6043709146853,108.66351539655665,4
