@@ -53,9 +53,10 @@ export function Loading({ label = 'Loading…' }: { label?: string }) {
 
 export function StatusPill({ status }: { status: DataStatus | string | null | undefined }) {
   if (!status) return null;
-  const text = status === 'live' ? 'Live' : status === 'test' ? 'Test data' : status === 'demo' ? 'Demo data' : 'Source not recorded';
+  const text = status === 'live' ? 'Live' : status === 'recent' ? 'Recent fare' : status === 'test' ? 'Test data' : status === 'demo' ? 'Demo data' : 'Source not recorded';
   const title = status === 'test' ? 'Duffel test environment: sandbox offers, not real prices or bookable tickets'
     : status === 'demo' ? 'Simulated for development; not real offers'
+    : status === 'recent' ? 'Real fare found by Aviasales users in the last few days; confirm the price on the booking site'
     : status === 'live' ? 'Live provider data; revalidate before booking' : 'Searched before FlyCompare recorded the data source';
   return <span className={`status-pill ${status}`} title={title}>{text}</span>;
 }

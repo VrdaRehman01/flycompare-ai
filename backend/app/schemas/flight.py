@@ -208,7 +208,7 @@ class FareConditions(BaseModel):
 class FlightOffer(BaseModel):
     id: str
     provider: str
-    data_status: Literal["demo", "test", "live"] = "demo"
+    data_status: Literal["demo", "test", "live", "recent"] = "demo"
     retrieved_at: datetime
     airline: str
     flight_number: str
@@ -242,10 +242,14 @@ class FlightOffer(BaseModel):
     # Whether the provider can return seat maps / paid extras for this offer (fetched on demand).
     supports_seat_maps: bool = False
     supports_extra_services: bool = False
+    # Metasearch sources: where to book, which agency sells the fare, and whether the total is an estimate.
+    booking_url: str | None = None
+    sold_by: str | None = None
+    price_is_estimate: bool = False
 
 
 class FlightSearchResponse(BaseModel):
-    data_status: Literal["demo", "test", "live"] = "demo"
+    data_status: Literal["demo", "test", "live", "recent"] = "demo"
     source_message: str
     results: list[FlightOffer]
     search_id: int | None = None

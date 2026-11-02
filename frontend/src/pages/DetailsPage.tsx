@@ -175,7 +175,16 @@ export function DetailsPage({ flight: f, query, hasResults }: { flight: Flight; 
           </div>
           {f.supports_extra_services && <button className="btn btn-ghost small" onClick={loadOffer} disabled={offer.state === 'loading'}>{offer.state === 'loading' ? <span className="spinner dark" /> : <RefreshCw size={14} />} Re-check price</button>}
           {offer.state === 'error' && <Notice kind="error">{offer.error}</Notice>}
-          <p className="muted small">{f.data_status === 'live' ? 'Seats and bags are reserved only when booked with the airline or an agent. FlyCompare does not issue tickets.' : 'Sandbox or demo offer: not bookable.'}</p>
+          {f.booking_url && (
+            <a className="btn btn-primary full" href={f.booking_url} target="_blank" rel="noreferrer noopener sponsored">
+              <ExternalLink size={15} /> Check price &amp; book{f.sold_by ? ` with ${f.sold_by}` : ''}
+            </a>
+          )}
+          <p className="muted small">
+            {f.data_status === 'live' ? 'Seats and bags are reserved only when booked with the airline or an agent. FlyCompare does not issue tickets.'
+              : f.data_status === 'recent' ? `Recent fare, not a live quote: the price and seats are confirmed on Aviasales${f.sold_by ? ` (sold by ${f.sold_by})` : ''}. FlyCompare does not issue tickets.${f.price_is_estimate ? ' The total is estimated from the fare for one adult.' : ''}`
+              : 'Sandbox or demo offer: not bookable.'}
+          </p>
           {(current?.conditions_of_carriage_url ?? f.conditions_of_carriage_url) && <a className="link-btn small" href={(current?.conditions_of_carriage_url ?? f.conditions_of_carriage_url)!} target="_blank" rel="noreferrer noopener"><ExternalLink size={13} /> Airline conditions of carriage</a>}
         </aside>
       </div>
@@ -349,7 +358,7 @@ function SeatsTab({ f, passengers, offerState, passengerLabel, seats, setSeats }
       {maps.length > 1 && <div className="seg-switch" role="tablist">{maps.map((m, i) => <button key={i} role="tab" aria-selected={segment === i} className={segment === i ? 'active' : ''} onClick={() => setSegment(i)}>{labelFor(m.segment_id, i)}</button>)}</div>}
       <SeatMap key={map.segment_id ?? segment} map={map} passengers={ids} passengerLabel={passengerLabel} choices={seats}
         onChoose={(c) => setSeats((all) => [...all.filter((x) => !(x.segmentId === c.segmentId && x.passengerId === c.passengerId)), ...(c.designator ? [c as SeatChoice] : [])])} />
-      <p className="muted small tab-note">Seat availability and prices come from the airline via {f.provider} and are reserved only when the booking is made with the airline. {f.data_status !== 'live' ? 'This is sandbox data.' : ''}</p>
+      <p className="muted small tab-note">Seat availability and prices come from the airline via {f.provider} and are reserved only when the booking is made with the airline. {f.data_status === 'test' || f.data_status === 'demo' ? 'This is sandbox data.' : ''}</p>
     </>
   );
 }

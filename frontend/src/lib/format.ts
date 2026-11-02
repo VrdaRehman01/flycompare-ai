@@ -48,7 +48,7 @@ export const legsOf = (f: Flight): Itinerary[] => f.itineraries?.length ? f.itin
   arriving_at: `${f.departure_date}T${f.arrival_time}`, duration_minutes: f.duration_minutes, stops: f.stops, segments: [],
 }];
 export const stopsLabel = (n: number) => n === 0 ? 'Direct' : `${n} stop${n > 1 ? 's' : ''}`;
-export const statusLabel = (s: string) => s === 'live' ? 'Live fare' : s === 'test' ? 'Test fare' : 'Demo fare';
+export const statusLabel = (s: string) => s === 'live' ? 'Live fare' : s === 'recent' ? 'Recent fare' : s === 'test' ? 'Test fare' : 'Demo fare';
 
 /** Minutes between two ISO datetimes with offsets (true elapsed time, timezone-safe). */
 export const minutesBetween = (a: string, b: string) => Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000);

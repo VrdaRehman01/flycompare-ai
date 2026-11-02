@@ -5,6 +5,7 @@ from typing import Any
 import httpx
 
 from app.core.config import Settings
+from app.providers.errors import FlightProviderError
 from app.schemas.flight import (
     Amenity,
     BaggageAllowance,
@@ -45,7 +46,7 @@ def _amount(value: Any) -> float | None:
         return None
 
 
-class DuffelProviderError(Exception):
+class DuffelProviderError(FlightProviderError):
     """Raised when Duffel cannot return a usable flight search."""
 
 

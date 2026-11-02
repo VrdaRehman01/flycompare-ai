@@ -36,9 +36,14 @@ class Settings(BaseSettings):
         ]
     )
 
-    # "mock" (simulated demo offers, development only) or "duffel". Outside development
-    # only providers returning live data are allowed; see build_flight_provider.
+    # "mock" (simulated demo offers, development only), "duffel" (live/sandbox offers) or
+    # "travelpayouts" (recent real fares from the Aviasales Data API). Outside development
+    # only real data (live or recent) is allowed; see build_flight_provider.
     flight_provider: str = "mock"
+    travelpayouts_token: str | None = None
+    travelpayouts_marker: str | None = None  # partner ID, added to booking links
+    travelpayouts_api_url: str = "https://api.travelpayouts.com"
+    travelpayouts_timeout_seconds: float = 20.0
     duffel_access_token: str | None = None
     duffel_api_url: str = "https://api.duffel.com"
     duffel_api_version: str = "v2"

@@ -13,7 +13,7 @@ from app.core.config import BACKEND_DIR, ENV_FILES, REPO_ROOT, get_settings
 from app.core.database import get_db
 from app.core.rate_limit import limit_search, limiter
 from app.models import FlightSearchHistory, User
-from app.providers.duffel_provider import DuffelProviderError
+from app.providers.errors import FlightProviderError
 from app.providers.factory import ProviderConfigError, build_flight_provider
 from app.schemas.flight import FlightSearchRequest, FlightSearchResponse
 from app.services import search_service
@@ -80,8 +80,8 @@ def search_flights(
 
     try:
         results = provider.search(request)
-    except DuffelProviderError as exc:
-        logger.warning("Duffel flight search failed: %s", exc)
+    except FlightProviderError as exc:
+        logger.warning("Flight search failed (%s): %s", type(provider).__name__, exc)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     history = search_service.record_search(db, request, results, provider.name, data_status, user)
@@ -138,7 +138,7 @@ def _provider_call(capability: str, offer_id: str):
         return None, data_status
     try:
         return method(offer_id), data_status
-    except DuffelProviderError as exc:
+    except FlightProviderError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 

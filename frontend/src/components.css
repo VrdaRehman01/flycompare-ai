@@ -34,6 +34,7 @@ a.brand { text-decoration: none; }
 .status-pill.test { background: var(--amber-soft); color: var(--amber); }
 .status-pill.demo { background: var(--surface-3); color: var(--muted); }
 .status-pill.live { background: var(--green-soft); color: var(--green); }
+.status-pill.recent { background: var(--blue-soft); color: var(--blue); }
 .status-pill.unknown { background: var(--surface-3); color: var(--muted); }
 
 /* --------------------------------------------------------------- prices */

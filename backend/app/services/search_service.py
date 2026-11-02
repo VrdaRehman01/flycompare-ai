@@ -11,6 +11,7 @@ SOURCE_MESSAGES = {
     "test": "Duffel test-environment results. These are sandbox offers, not live prices or bookable tickets.",
     "live": "Live Duffel search results. Prices and availability may change and should be revalidated before booking.",
     "demo": "Demo results generated for development only. These are simulated offers, not live prices, seat availability, or bookable tickets.",
+    "recent": "Recent fares found by Aviasales users in the last few days. They are real prices but not live quotes: confirm the price and seats on the booking site.",
 }
 
 
@@ -71,7 +72,9 @@ def record_search(
     # differently from a simple adults-only route, so they are not stored as
     # observations; that keeps every price history like-for-like.
     comparable = request.trip_type != "multi-city" and request.children == 0 and request.infants == 0
-    if data_status in {"test", "live"} and comparable:
+    # "recent" fares are real prices reported by the fare source at search time, so they are
+    # observations too; they stay labelled and grouped separately from live and test data.
+    if data_status in {"test", "live", "recent"} and comparable:
         for offer in results:
             db.add(
                 FareObservation(

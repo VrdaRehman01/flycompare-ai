@@ -61,7 +61,7 @@ export function ResultsPage({ search, onEdit, onSelect }: { search: SearchState;
         <StatusPill status={response.data_status} />
         <button className="btn btn-soft" onClick={onEdit}>Modify search</button>
       </div>
-      <Notice kind={response.data_status === 'live' ? 'info' : 'warn'}>{response.source_message} <span className="muted">Searched {dateTime(search.searchedAt)}.</span></Notice>
+      <Notice kind={response.data_status === 'live' || response.data_status === 'recent' ? 'info' : 'warn'}>{response.source_message} <span className="muted">Searched {dateTime(search.searchedAt)}.</span></Notice>
 
       <div className="results-layout">
         <aside className={`card filters ${filtersOpen ? 'open' : ''}`} aria-label="Filters">

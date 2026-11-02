@@ -130,7 +130,7 @@ def compute_analytics(db: Session, range_key: Range, user_id: int | None) -> dic
 
     lowest_by_group: dict[tuple[str, str], list[float]] = defaultdict(list)
     for r in rows:
-        if r.min_price is not None and r.currency and r.data_status in {"test", "live"}:
+        if r.min_price is not None and r.currency and r.data_status in {"test", "live", "recent"}:
             lowest_by_group[(r.currency, r.data_status)].append(r.min_price)
 
     fares = [
