@@ -1,0 +1,101 @@
+/* --------------------------------------------------------- flight details */
+.details-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+.details-save { margin-left: auto; align-self: flex-start; }
+.fare-summary { position: sticky; top: 84px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.fare-summary h2 { font-size: 16px; }
+.fare-summary dl { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; font-size: 13px; }
+.fare-summary dt { color: var(--ink-2); }
+.fare-summary dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.fare-summary dd.full { grid-column: 1 / -1; text-align: left; }
+.fare-summary .strong { font-weight: 700; color: var(--ink); }
+.fare-total { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px dashed var(--line-2); font-weight: 600; }
+.fare-total strong { font-size: 24px; }
+.fare-meta { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.fare-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.fare-summary .btn.small { align-self: flex-start; }
+.tab-h { font-size: 14px; margin: 4px 0 12px; }
+.tab-h:not(:first-child) { margin-top: 24px; }
+.bag-group + .bag-group { margin-top: 14px; }
+.bag-group-title { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+.condition-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.condition-card { display: flex; gap: 12px; padding: 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); }
+.condition-card div { display: flex; flex-direction: column; gap: 2px; }
+.condition-card b { font-size: 16px; }
+.condition-card small { font-size: 12px; color: var(--muted); }
+.condition-card.good { border-color: color-mix(in srgb, var(--green) 35%, var(--line)); }
+.condition-card.good b { color: var(--green); }
+.condition-card.warn b { color: var(--amber); }
+.condition-card.bad b { color: var(--red); }
+.condition-card.unknown b { color: var(--muted); }
+.facts { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+.facts th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.facts th svg { vertical-align: -2px; }
+.facts td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.facts tr:last-child td { border-bottom: 0; }
+.amenity { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--surface-3); color: var(--ink-2); }
+.amenity.good { background: var(--green-soft); color: var(--green); }
+.amenity.bad { background: var(--red-soft); color: var(--red); }
+.amenity.unknown { background: transparent; color: var(--muted); border: 1px dashed var(--line-2); }
+.extra-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.extra-list li { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; }
+.extra-list li > div { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.extra-list small { color: var(--muted); font-size: 12px; }
+.extra-price { font-weight: 700; font-variant-numeric: tabular-nums; }
+.stepper { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line-2); border-radius: 999px; padding: 2px; }
+.stepper button { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); }
+.stepper button:hover:not(:disabled) { background: var(--surface-3); }
+.stepper button:disabled { opacity: .35; }
+.stepper span { min-width: 18px; text-align: center; font-weight: 700; }
+.seg-switch { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.seg-switch button { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.seg-switch button.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+/* Seat map, drawn as a fuselage with the nose at the top. */
+.seatmap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.seat-passengers { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.seat-passengers button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 13px; font-weight: 600; }
+.seat-passengers button small { color: var(--muted); font-weight: 500; }
+.seat-passengers button.active { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+.seat-dot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--blue); color: #fff; font-size: 11px; }
+.seat-legend { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; list-style: none; margin: 0; padding: 0; font-size: 12px; color: var(--muted); }
+.seat-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.seat-legend .seat { width: 16px; height: 16px; pointer-events: none; }
+.cabin { padding: 28px 18px 18px; border: 1px solid var(--line); border-radius: 120px 120px 22px 22px; background: linear-gradient(var(--surface-2), var(--surface)); max-width: 100%; overflow-x: auto; }
+.cabin-label { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.seat-rows { display: flex; flex-direction: column; gap: 6px; }
+.seat-row { display: flex; align-items: center; gap: 14px; }
+.seat-row.exit { padding: 4px 0; border-block: 1px dashed color-mix(in srgb, var(--amber) 55%, transparent); }
+.row-num { width: 18px; text-align: center; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.seat-section { display: flex; gap: 5px; }
+.seat { width: 30px; height: 32px; border-radius: 8px 8px 5px 5px; font-size: 11px; font-weight: 700; display: grid; place-items: center; border: 1px solid transparent; transition: transform .1s, box-shadow .1s; }
+.seat.free { background: var(--blue-soft); color: var(--blue); border-color: color-mix(in srgb, var(--blue) 30%, transparent); }
+.seat.paid { background: var(--amber-soft); color: var(--amber); border-color: color-mix(in srgb, var(--amber) 35%, transparent); }
+.seat.selected { background: var(--blue); color: #fff; }
+.seat.taken { background: var(--surface-3); color: transparent; cursor: not-allowed; background-image: repeating-linear-gradient(45deg, transparent 0 4px, var(--line) 4px 5px); }
+.seat:not(:disabled):hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.seat:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.seat-gap { width: 30px; }
+.exit-mark { width: 22px; display: grid; place-items: center; color: var(--amber); }
+.seat-legend .exit-mark { width: auto; }
+.facility { width: 30px; height: 32px; border-radius: 6px; display: grid; place-items: center; font-size: 10px; font-weight: 700; color: var(--muted); background: var(--surface-3); }
+
+@media (max-width: 1024px) {
+  .details-layout { grid-template-columns: 1fr; }
+  .fare-summary { position: static; }
+}
+@media (max-width: 640px) {
+  .condition-grid { grid-template-columns: 1fr; }
+  .facts { display: block; overflow-x: auto; white-space: nowrap; }
+  .seat, .seat-gap, .facility { width: 26px; height: 28px; }
+  .seat-row { gap: 8px; }
+  .cabin { padding-inline: 10px; }
+  .extra-list li { flex-wrap: wrap; }
+}
+
+/* results: time-of-day filter */
+.time-windows { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.time-window { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line-2); text-align: left; font-size: 12px; }
+.time-window small { font-size: 11px; color: var(--ink-2); }
+.time-window.on { border-color: var(--blue); background: var(--blue-soft); }
+.time-window:disabled { opacity: .45; }
+.check-row .airline-logo { border-radius: 6px; }

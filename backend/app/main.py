@@ -3,8 +3,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes.health import router as health_router
+from app.api.routes.account import router as account_router
+from app.api.routes.auth import router as auth_router
 from app.api.routes.flights import router as flights_router
+from app.api.routes.health import router as health_router
+from app.api.routes.insights import router as insights_router
+from app.api.routes.travel import router as travel_router
 from app.core.config import get_settings
 from app.core.database import init_db
 
@@ -23,7 +27,7 @@ app = FastAPI(
         "Intelligent flight comparison and travel decision support. "
         "Historical/demo data will be labeled explicitly; it is not live availability."
     ),
-    version="0.1.0",
+    version="0.2.0",
     debug=settings.app_debug,
     lifespan=lifespan,
 )
@@ -33,7 +37,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 
 
@@ -50,3 +54,7 @@ def root() -> dict[str, str]:
 
 app.include_router(health_router)
 app.include_router(flights_router)
+app.include_router(auth_router)
+app.include_router(account_router)
+app.include_router(insights_router)
+app.include_router(travel_router)

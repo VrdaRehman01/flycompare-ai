@@ -1,0 +1,186 @@
+/*
+ * FlyCompare design tokens. Every colour, size and motion value used by the UI
+ * comes from here; components never hard-code theme colours.
+ *
+ *   Brand        Sky blue (--blue) for actions and focus; Dusk amber (--dusk),
+ *                taken from the hero photograph, as the warm secondary accent.
+ *   Type         Bricolage Grotesque for display headings, Plus Jakarta Sans for UI.
+ *   Surfaces     --bg (page) < --surface (cards) < --surface-2 (insets) < --surface-3 (wells, chips)
+ *   Status       --green success · --amber warning/test data · --red error
+ *   Dark mode    Neutral graphite surfaces with a faint blue cast, lifted by
+ *                lightness rather than by saturated navy, so cards read as
+ *                layers; accents are brightened to keep WCAG AA contrast.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  color-scheme: light;
+
+  /* surfaces & text */
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #eef2f7;
+  --ink: #0d1626;
+  --ink-2: #344256;
+  --muted: #64748b;
+  --line: #e5e9f0;
+  --line-2: #d4dbe6;
+
+  /* brand */
+  --blue: #1a6dff;
+  --blue-600: #0b58e0;
+  --blue-soft: #e8f0ff;
+  --navy: #0e1f3d;
+  --dusk: #d9733a;
+  --dusk-soft: #fdf0e6;
+
+  /* status */
+  --green: #0f9a4b;
+  --green-soft: #e2f5ea;
+  --amber: #b46f00;
+  --amber-soft: #fff2d9;
+  --red: #d93b40;
+  --red-soft: #fdecec;
+
+  /* semantic aliases */
+  --accent: var(--blue);
+  --success: var(--green);
+  --warning: var(--amber);
+  --danger: var(--red);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--blue) 35%, transparent);
+
+  /* elevation */
+  --shadow-sm: 0 1px 2px rgba(13, 22, 38, .05), 0 2px 8px rgba(13, 22, 38, .04);
+  --shadow: 0 10px 30px rgba(13, 32, 64, .08);
+  --shadow-lg: 0 24px 60px rgba(13, 32, 64, .14);
+
+  /* charts & maps */
+  --chart-2: #14a594;
+  --chart-3: #e59a0b;
+  --chart-4: #7c5cf0;
+  --chart-5: #94a3b8;
+  --map-water: #dfe9f7;
+  --map-land: #f8fafd;
+  --map-border: #cfd9ea;
+  --map-accent: #e8892b;
+
+  /* fare calendar heat */
+  --fare-low: #0f9a4b;
+  --fare-mid: #7a8699;
+  --fare-high: #d9733a;
+
+  /* type */
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Bricolage Grotesque', var(--font-body);
+  --fs-xs: 11px;
+  --fs-sm: 12.5px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 28px;
+  --fs-display: clamp(34px, 5vw, 56px);
+
+  /* spacing (4px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 56px;
+
+  /* shape */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  /* motion */
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --dur-fast: .15s;
+  --dur: .25s;
+
+  /* layers */
+  --z-sticky: 20;
+  --z-popover: 40;
+  --z-modal: 60;
+  --z-toast: 80;
+
+  /* legacy (illustrations) */
+  --hero-bg: linear-gradient(180deg, #bcd8fb 0%, #d9e8fc 45%, #eef4fd 80%, var(--bg) 100%);
+  --cloud: #ffffff;
+  --plane-hi: #ffffff;
+  --plane-lo: #dbe5f2;
+  --plane-shade: #c4d2e6;
+  --plane-window: #2a4570;
+  --hero-glow: #ffffff;
+
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0b0e14;
+  --surface: #12161e;
+  --surface-2: #171c26;
+  --surface-3: #1e2430;
+  --ink: #edf1f7;
+  --ink-2: #c3cad6;
+  --muted: #8b95a7;
+  --line: #222936;
+  --line-2: #2e3646;
+
+  --blue: #5b93ff;
+  --blue-600: #4a82f0;
+  --blue-soft: #172238;
+  --navy: #1a2440;
+  --dusk: #f0975c;
+  --dusk-soft: #2e1e14;
+
+  --green: #3ccf7d;
+  --green-soft: #10271a;
+  --amber: #f2b45a;
+  --amber-soft: #2c2312;
+  --red: #ff6b6f;
+  --red-soft: #341619;
+
+  /* in the dark, elevation is a lighter edge plus a deep shadow */
+  --shadow-sm: 0 0 0 1px rgba(255, 255, 255, .02), 0 2px 6px rgba(0, 0, 0, .35);
+  --shadow: 0 0 0 1px rgba(255, 255, 255, .03), 0 12px 32px rgba(0, 0, 0, .45);
+  --shadow-lg: 0 0 0 1px rgba(255, 255, 255, .04), 0 24px 60px rgba(0, 0, 0, .6);
+
+  --chart-2: #2dd4bf;
+  --chart-3: #fbbf24;
+  --chart-4: #a78bfa;
+  --chart-5: #64748b;
+  --map-water: #0a0f18;
+  --map-land: #161c27;
+  --map-border: #273042;
+  --map-accent: #f2a54a;
+
+  --fare-low: #3ccf7d;
+  --fare-mid: #8b95a7;
+  --fare-high: #f0975c;
+
+  --hero-bg: linear-gradient(180deg, #121826 0%, #111722 40%, #0d1119 80%, var(--bg) 100%);
+  --cloud: #263043;
+  --plane-hi: #d7e2f3;
+  --plane-lo: #8ea3c4;
+  --plane-shade: #6f86ab;
+  --plane-window: #0d1b33;
+  --hero-glow: #2b3f66;
+}
+
+/* Display type: page and section titles only. */
+h1, h2, .display { font-family: var(--font-display); font-optical-sizing: auto; letter-spacing: -.025em; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

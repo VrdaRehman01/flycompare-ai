@@ -44,11 +44,15 @@ class Base(DeclarativeBase):
     pass
 
 
-def init_db() -> None:
-    """Create any missing tables so a fresh checkout can serve requests."""
+def init_db(bind=None) -> None:
+    """Create missing tables, then apply versioned migrations for existing ones."""
     from app import models  # noqa: F401  (registers models on Base.metadata)
+    from app.core.migrations import run_migrations
 
-    Base.metadata.create_all(bind=engine)
+    target = bind or engine
+    Base.metadata.create_all(bind=target)
+    with target.begin() as conn:
+        run_migrations(conn)
 
 
 def get_db() -> Generator[Session, None, None]:
