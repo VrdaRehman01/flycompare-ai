@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.security import hash_password, hash_session_token, new_session_token, verify_password
 from app.models import (
+    EmailCode,
     FareObservation,
+    SavedRoute,
     FavouriteDestination,
     FlightSearchHistory,
     RecentlyViewedFlight,
@@ -16,6 +18,7 @@ from app.models import (
     UserSession,
 )
 from app.schemas.account import Preferences, UserOut
+from app.services import code_service
 
 # Used to equalise timing when an email is unknown, so login does not reveal which emails exist.
 _DUMMY_HASH = hash_password("not-a-real-password-0")
@@ -28,17 +31,20 @@ def user_out(user: User) -> UserOut:
         email=user.email,
         preferences=Preferences(**(user.preferences or {})),
         created_at=user.created_at,
+        email_verified=user.email_verified_at is not None,
+        has_password=user.password_hash.startswith("scrypt$"),
     )
 
 
-def register(db: Session, name: str, email: str, password: str) -> User:
-    if db.scalar(select(User.id).where(User.email == email)) is not None:
-        raise HTTPException(status_code=409, detail="An account with this email already exists.")
-    user = User(name=name, email=email, password_hash=hash_password(password), preferences={})
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+def start_registration(db: Session, name: str, email: str, password: str) -> dict:
+    """Email a code that creates the account once entered.
+
+    The response is the same whether or not the address already has an account (the
+    email itself tells an existing owner to sign in instead), so registration cannot be
+    used to discover which emails are registered, and nobody can claim an address they
+    cannot read mail for.
+    """
+    return code_service.issue(db, email, "register", {"name": name, "password_hash": hash_password(password)})
 
 
 def authenticate(db: Session, email: str, password: str) -> User:
@@ -97,7 +103,8 @@ def delete_account(db: Session, user: User) -> None:
     search_ids = select(FlightSearchHistory.id).where(FlightSearchHistory.user_id == user.id)
     db.execute(update(FareObservation).where(FareObservation.search_id.in_(search_ids)).values(search_id=None))
     db.execute(delete(FlightSearchHistory).where(FlightSearchHistory.user_id == user.id))
-    for model in (SavedFlight, RecentlyViewedFlight, FavouriteDestination, UserSession):
+    for model in (SavedFlight, RecentlyViewedFlight, FavouriteDestination, SavedRoute, UserSession):
         db.execute(delete(model).where(model.user_id == user.id))
+    db.execute(delete(EmailCode).where(EmailCode.email == user.email))
     db.delete(user)
     db.commit()

@@ -3,7 +3,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.core.security import hash_password, verify_password
 from app.models import SavedFlight, User, UserSession
-from tests.conftest import make_client, register
+from tests.conftest import OUTBOX, last_code, make_client, register
 
 
 def test_password_hashing_is_salted_and_verifiable():
@@ -34,20 +34,31 @@ def test_register_sets_httponly_session_and_never_stores_plaintext(client, db_se
     assert me["id"] == user["id"]
 
 
-def test_register_sets_cookie_flags(client):
-    response = client.post("/api/auth/register", json={"name": "A", "email": "a@example.com", "password": "secret123"})
+def test_register_sets_cookie_flags_only_after_email_verification(client):
+    pending = client.post("/api/auth/register", json={"name": "A", "email": "a@example.com", "password": "secret123"})
+    assert pending.status_code == 202 and "set-cookie" not in pending.headers
+    response = client.post("/api/auth/code/verify", json={"email": "a@example.com", "code": last_code("a@example.com")})
     header = response.headers["set-cookie"].lower()
     assert "httponly" in header
     assert "samesite=lax" in header
 
 
-def test_register_validation_and_duplicates(client):
+def test_register_validation_and_duplicates(client, db_session, monkeypatch):
+    monkeypatch.setattr(get_settings(), "login_code_resend_seconds", 0)
     assert client.post("/api/auth/register", json={"name": "A", "email": "not-an-email", "password": "secret123"}).status_code == 422
     assert client.post("/api/auth/register", json={"name": "A", "email": "a@example.com", "password": "short1"}).status_code == 422
     assert client.post("/api/auth/register", json={"name": "A", "email": "a@example.com", "password": "lettersonly"}).status_code == 422
     register(client, email="a@example.com")
-    duplicate = make_client().post("/api/auth/register", json={"name": "B", "email": "A@Example.com", "password": "secret123"})
-    assert duplicate.status_code == 409
+    original_hash = db_session.scalar(select(User.password_hash))
+    # Registering an existing address looks exactly like a new registration (no enumeration)...
+    duplicate = make_client().post("/api/auth/register", json={"name": "B", "email": "A@Example.com", "password": "other-pass9"})
+    assert duplicate.status_code == 202
+    assert "already have one" in OUTBOX[-1]["text"]
+    # ...and confirming it signs the owner in without replacing their password.
+    intruder = make_client()
+    assert intruder.post("/api/auth/code/verify", json={"email": "a@example.com", "code": last_code("a@example.com")}).status_code == 200
+    db_session.expire_all()
+    assert db_session.scalar(select(User.password_hash)) == original_hash
 
 
 def test_login_logout_flow(client):

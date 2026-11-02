@@ -283,7 +283,9 @@ function PreferencesTab({ user }: { user: User }) {
 }
 
 function SecurityTab() {
-  const { setUser } = useAuth();
+  const { user, setUser } = useAuth();
+  // Accounts created by code sign-in have no password yet and can set one directly.
+  const hasPassword = user?.has_password !== false;
   const toast = useToast();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -298,32 +300,33 @@ function SecurityTab() {
     if (next !== confirmNext) { setError('The new passwords do not match.'); return; }
     setBusy(true);
     try {
-      await api('/api/account/password', { method: 'POST', body: { current_password: current, new_password: next } });
+      await api('/api/account/password', { method: 'POST', body: { current_password: hasPassword ? current : null, new_password: next } });
       setCurrent(''); setNext(''); setConfirmNext('');
-      toast('success', 'Password changed. Other devices have been signed out.');
+      toast('success', hasPassword ? 'Password changed. Other devices have been signed out.' : 'Password set. You can now also sign in with it.');
+      if (!hasPassword) setUser(await api<User>('/api/auth/me'));
     } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
   };
 
   return (
     <>
-      <Section title="Change password" sub="Changing your password signs you out on all other devices.">
+      <Section title={hasPassword ? 'Change password' : 'Set a password'} sub={hasPassword ? 'Changing your password signs you out on all other devices.' : 'You sign in with emailed codes. Add a password if you also want to sign in with one.'}>
         <form className="form narrow" onSubmit={change}>
-          <label className="form-field"><span>Current password</span><input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" /></label>
+          {hasPassword && <label className="form-field"><span>Current password</span><input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" /></label>}
           <label className="form-field"><span>New password</span><input type="password" value={next} onChange={(e) => setNext(e.target.value)} required minLength={8} maxLength={128} autoComplete="new-password" /><small>At least 8 characters, including a letter and a number.</small></label>
           <label className="form-field"><span>Confirm new password</span><input type="password" value={confirmNext} onChange={(e) => setConfirmNext(e.target.value)} required autoComplete="new-password" /></label>
           {error && <Notice kind="error">{error}</Notice>}
-          <div className="row-actions"><button className="btn btn-primary" disabled={busy}>{busy && <span className="spinner" />}Change password</button></div>
+          <div className="row-actions"><button className="btn btn-primary" disabled={busy}>{busy && <span className="spinner" />}{hasPassword ? 'Change password' : 'Set password'}</button></div>
         </form>
       </Section>
       <Section title="Delete account" sub="Permanently removes your profile, saved flights, favourites, recently viewed flights, preferences and search history.">
         <div className="row-actions"><button className="btn btn-danger" onClick={() => setDeleting(true)}><Trash2 size={15} /> Delete my account</button></div>
       </Section>
-      {deleting && <DeleteAccountDialog onClose={() => setDeleting(false)} onDeleted={() => { setUser(null); toast('info', 'Your account has been deleted.'); navigate({ page: 'home' }); window.location.reload(); }} />}
+      {deleting && <DeleteAccountDialog needsPassword={hasPassword} onClose={() => setDeleting(false)} onDeleted={() => { setUser(null); toast('info', 'Your account has been deleted.'); navigate({ page: 'home' }); window.location.reload(); }} />}
     </>
   );
 }
 
-function DeleteAccountDialog({ onClose, onDeleted }: { onClose: () => void; onDeleted: () => void }) {
+function DeleteAccountDialog({ needsPassword, onClose, onDeleted }: { needsPassword: boolean; onClose: () => void; onDeleted: () => void }) {
   const [password, setPassword] = useState('');
   const [typed, setTyped] = useState('');
   const [error, setError] = useState('');
@@ -333,7 +336,7 @@ function DeleteAccountDialog({ onClose, onDeleted }: { onClose: () => void; onDe
     setBusy(true);
     setError('');
     try {
-      await api('/api/account/delete', { method: 'POST', body: { password, confirm: typed } });
+      await api('/api/account/delete', { method: 'POST', body: { password: needsPassword ? password : null, confirm: typed } });
       onDeleted();
     } catch (err) { setError(errorText(err)); setBusy(false); }
   };
@@ -341,10 +344,10 @@ function DeleteAccountDialog({ onClose, onDeleted }: { onClose: () => void; onDe
     <Modal title="Delete your account?" onClose={onClose}>
       <form className="form" onSubmit={submit}>
         <Notice kind="warn">This cannot be undone. All of your personal data will be permanently deleted.</Notice>
-        <label className="form-field"><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" /></label>
+        {needsPassword && <label className="form-field"><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" /></label>}
         <label className="form-field"><span>Type DELETE to confirm</span><input value={typed} onChange={(e) => setTyped(e.target.value)} required autoComplete="off" /></label>
         {error && <Notice kind="error">{error}</Notice>}
-        <div className="modal-actions"><button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button><button className="btn btn-danger" disabled={busy || typed !== 'DELETE' || !password}>{busy && <span className="spinner" />}Delete account</button></div>
+        <div className="modal-actions"><button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button><button className="btn btn-danger" disabled={busy || typed !== 'DELETE' || (needsPassword && !password)}>{busy && <span className="spinner" />}Delete account</button></div>
       </form>
     </Modal>
   );

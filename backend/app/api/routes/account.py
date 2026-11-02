@@ -19,7 +19,7 @@ from app.schemas.account import (
     SaveFlightRequest,
     UserOut,
 )
-from app.services import airport_service, auth_service, deals_service
+from app.services import airport_service, auth_service, code_service, deals_service
 from app.services.history_service import history_rows
 
 router = APIRouter(prefix="/api/account", tags=["account"], dependencies=[Depends(require_csrf_header)])
@@ -38,11 +38,14 @@ def get_profile(user: User = Depends(get_current_user)) -> UserOut:
 def update_profile(body: ProfileUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> UserOut:
     if body.email and body.email != user.email:
         # Changing the sign-in email requires the current password.
+        if not code_service.has_password(user):
+            raise HTTPException(status_code=400, detail="Set a password first (Security tab), then change your email.")
         if not body.current_password or not verify_password(body.current_password, user.password_hash):
             raise HTTPException(status_code=400, detail="Enter your current password to change your email.")
         if db.scalar(select(User.id).where(User.email == body.email, User.id != user.id)) is not None:
             raise HTTPException(status_code=409, detail="An account with this email already exists.")
         user.email = body.email
+        user.email_verified_at = None  # the new address is confirmed with a code at the next sign-in
     if body.name:
         user.name = body.name
     db.commit()
@@ -60,7 +63,8 @@ def update_preferences(body: Preferences, user: User = Depends(get_current_user)
 
 @router.post("/password", status_code=204, dependencies=[Depends(limit_auth)])
 def change_password(body: PasswordChange, request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
-    if not verify_password(body.current_password, user.password_hash):
+    # Accounts created by code sign-in have no password yet and may set one directly.
+    if code_service.has_password(user) and not (body.current_password and verify_password(body.current_password, user.password_hash)):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
     user.password_hash = hash_password(body.new_password)
     # Sign out every other device; keep the current session.
@@ -71,7 +75,7 @@ def change_password(body: PasswordChange, request: Request, user: User = Depends
 
 @router.post("/delete", status_code=204, dependencies=[Depends(limit_auth)])
 def delete_account(body: DeleteAccountRequest, response: Response, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
-    if not verify_password(body.password, user.password_hash):
+    if code_service.has_password(user) and not (body.password and verify_password(body.password, user.password_hash)):
         raise HTTPException(status_code=400, detail="Password is incorrect.")
     auth_service.delete_account(db, user)
     settings = get_settings()

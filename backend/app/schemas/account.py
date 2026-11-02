@@ -51,6 +51,34 @@ class LoginRequest(BaseModel):
         return value.strip().lower()
 
 
+class CodeRequest(BaseModel):
+    email: str = Field(max_length=254)
+
+    _email = field_validator("email")(_clean_email)
+
+
+class CodeVerify(BaseModel):
+    email: str = Field(max_length=254)
+    code: str = Field(pattern=r"^\s*\d{6}\s*$")
+    name: str | None = Field(default=None, max_length=100)
+
+    _email = field_validator("email")(_clean_email)
+
+    @field_validator("code")
+    @classmethod
+    def _strip(cls, value: str) -> str:
+        return value.strip()
+
+
+class VerificationPending(BaseModel):
+    """Returned instead of a signed-in user when the email still has to be confirmed with a code."""
+
+    verification_required: Literal[True] = True
+    email: str
+    expires_in_seconds: int
+    resend_after_seconds: int
+
+
 class Preferences(BaseModel):
     home_airport: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
     cabin: Literal["Economy", "Premium economy", "Business", "First class"] | None = None
@@ -65,6 +93,8 @@ class UserOut(BaseModel):
     email: str
     preferences: Preferences
     created_at: datetime
+    email_verified: bool = False
+    has_password: bool = True
 
 
 class ProfileUpdate(BaseModel):
@@ -84,14 +114,16 @@ class ProfileUpdate(BaseModel):
 
 
 class PasswordChange(BaseModel):
-    current_password: str = Field(min_length=1, max_length=MAX_PASSWORD_LENGTH)
+    # Not needed when the account has no password yet (created by code sign-in).
+    current_password: str | None = Field(default=None, max_length=MAX_PASSWORD_LENGTH)
     new_password: str = Field(max_length=MAX_PASSWORD_LENGTH)
 
     _new = field_validator("new_password")(_check_password)
 
 
 class DeleteAccountRequest(BaseModel):
-    password: str = Field(min_length=1, max_length=MAX_PASSWORD_LENGTH)
+    # Required when the account has a password; passwordless accounts confirm with "DELETE" alone.
+    password: str | None = Field(default=None, max_length=MAX_PASSWORD_LENGTH)
     confirm: Literal["DELETE"]
 
 

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { BarChart3, BookOpen, Bookmark, CarFront, Check, ChevronDown, Globe2, Heart, History, LogIn, LogOut, Menu, Monitor, Moon, Plane, Settings, Sun, User as UserIcon, UserPlus, UserRound, Users, Wand2, X } from 'lucide-react';
+import { BarChart3, BookOpen, Bookmark, CarFront, Check, ChevronDown, Globe2, Heart, History, KeyRound, LogIn, LogOut, Mail, Menu, Monitor, Moon, Plane, Settings, Sun, User as UserIcon, UserPlus, UserRound, Users, Wand2, X } from 'lucide-react';
 import { errorText } from '../lib/api';
 import { useFeatures, type DemoService } from '../lib/features';
 import { navigate, type Route } from '../lib/router';
-import type { ThemePreference } from '../lib/types';
+import type { CodePending, ThemePreference } from '../lib/types';
 import { useAuth, usePrefs } from '../state';
 import { Modal, Notice } from './ui';
 
@@ -139,49 +139,130 @@ export function MenuItem({ children, onClick, icon, active }: { children: ReactN
   return <button role="menuitem" className={`menu-item ${active ? 'active' : ''}`} onClick={onClick}>{icon}<span>{children}</span>{active && <Check size={14} className="menu-check" />}</button>;
 }
 
+type AuthView = 'code' | 'password' | 'register' | 'enter';
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/**
+ * Sign in by emailed code (default) or password, or create an account with a password.
+ * Every route that needs the email confirmed ends on the code entry step.
+ */
 export function AuthModal() {
-  const { prompt, closeAuth, login, register, openAuth } = useAuth();
+  const { prompt, closeAuth, login, register, requestCode, verifyCode } = useAuth();
+  const [view, setView] = useState<AuthView>('code');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [pending, setPending] = useState<CodePending | null>(null);
+  const [cooldown, setCooldown] = useState(0);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  useEffect(() => { setError(''); setPassword(''); }, [prompt?.mode]);
-  if (!prompt) return null;
-  const isRegister = prompt.mode === 'register';
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (isRegister && (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password))) {
-      setError('Use at least 8 characters with at least one letter and one number.');
-      return;
-    }
-    setBusy(true);
-    try {
-      if (isRegister) await register(name, email, password); else await login(email, password);
-      setName(''); setEmail(''); setPassword('');
-    } catch (err) {
-      setError(errorText(err));
-    } finally { setBusy(false); }
+  useEffect(() => {
+    if (!prompt) return;
+    setView(prompt.mode === 'register' ? 'register' : 'code');
+    setError(''); setPassword(''); setCode(''); setPending(null);
+  }, [prompt?.mode, prompt]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = window.setTimeout(() => setCooldown((s) => s - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [cooldown]);
+  if (!prompt) return null;
+
+  const go = (v: AuthView) => { setView(v); setError(''); };
+  const run = async (task: () => Promise<void>) => {
+    setError(''); setBusy(true);
+    try { await task(); } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
   };
+  const awaitCode = (p: CodePending) => { setPending(p); setCode(''); setCooldown(p.resend_after_seconds); setView('enter'); };
+  const checkEmail = () => { if (!EMAIL_RE.test(email.trim())) { setError('Enter a valid email address.'); return false; } return true; };
+
+  const sendCode = (e?: FormEvent) => { e?.preventDefault(); if (checkEmail()) void run(async () => awaitCode(await requestCode(email.trim()))); };
+  const signIn = (e: FormEvent) => {
+    e.preventDefault();
+    if (checkEmail()) void run(async () => { const p = await login(email.trim(), password); if (p) awaitCode(p); });
+  };
+  const create = (e: FormEvent) => {
+    e.preventDefault();
+    if (!checkEmail()) return;
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) { setError('Use at least 8 characters with at least one letter and one number.'); return; }
+    void run(async () => awaitCode(await register(name, email.trim(), password)));
+  };
+  const confirm = (value = code) => {
+    if (!/^\d{6}$/.test(value) || !pending) { setError('Enter the 6-digit code from the email.'); return; }
+    void run(async () => { await verifyCode(pending.email, value); });
+  };
+  const resend = () => void run(async () => {
+    const p = view === 'enter' && pending && password && name ? await register(name, pending.email, password) : await requestCode(pending?.email ?? email.trim());
+    awaitCode(p);
+  });
+
+  const titles: Record<AuthView, string> = { code: 'Sign in or create an account', password: 'Sign in with password', register: 'Create your account', enter: 'Check your email' };
+  const emailField = <label className="form-field"><span>Email</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={254} autoFocus /></label>;
+  const submitBtn = (label: string) => <button className="btn btn-primary full" disabled={busy}>{busy && <span className="spinner" />}{label}</button>;
 
   return (
-    <Modal title={isRegister ? 'Create your account' : 'Sign in'} onClose={closeAuth}>
-      {prompt.reason && <Notice>{prompt.reason}</Notice>}
-      <form className="form" onSubmit={submit}>
-        {isRegister && <label className="form-field"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required maxLength={100} /></label>}
-        <label className="form-field"><span>Email</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={254} /></label>
-        <label className="form-field"><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={isRegister ? 'new-password' : 'current-password'} required maxLength={128} />
-          {isRegister && <small>At least 8 characters, including a letter and a number.</small>}</label>
-        {error && <Notice kind="error">{error}</Notice>}
-        <button className="btn btn-primary full" disabled={busy}>{busy && <span className="spinner" />}{isRegister ? 'Create account' : 'Sign in'}</button>
-      </form>
-      <p className="modal-switch">
-        {isRegister ? 'Already have an account? ' : 'New to FlyCompare? '}
-        <button className="link-btn" onClick={() => openAuth(isRegister ? 'login' : 'register', prompt.reason, prompt.onSuccess)}>{isRegister ? 'Sign in' : 'Create an account'}</button>
-      </p>
-      <p className="modal-fine">Passwords are stored as salted scrypt hashes. Your session uses a secure HttpOnly cookie.</p>
+    <Modal title={titles[view]} onClose={closeAuth}>
+      {prompt.reason && view !== 'enter' && <Notice>{prompt.reason}</Notice>}
+
+      {view === 'code' && (
+        <form className="form" onSubmit={sendCode} noValidate>
+          {emailField}
+          <p className="auth-hint"><Mail size={14} /> We'll email you a 6-digit code. New here? The code creates your account.</p>
+          {error && <Notice kind="error">{error}</Notice>}
+          {submitBtn('Email me a code')}
+          <div className="auth-alt"><span>or</span></div>
+          <button type="button" className="btn btn-ghost full" onClick={() => go('password')}><KeyRound size={15} /> Sign in with a password</button>
+        </form>
+      )}
+
+      {view === 'password' && (
+        <form className="form" onSubmit={signIn} noValidate>
+          {emailField}
+          <label className="form-field"><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required maxLength={128} /></label>
+          {error && <Notice kind="error">{error}</Notice>}
+          {submitBtn('Sign in')}
+          <p className="auth-links"><button type="button" className="link-btn" onClick={() => go('code')}>Forgot password? Sign in with a code</button></p>
+        </form>
+      )}
+
+      {view === 'register' && (
+        <form className="form" onSubmit={create} noValidate>
+          <label className="form-field"><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required maxLength={100} autoFocus /></label>
+          {emailField}
+          <label className="form-field"><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required maxLength={128} />
+            <small>At least 8 characters, including a letter and a number.</small></label>
+          {error && <Notice kind="error">{error}</Notice>}
+          {submitBtn('Create account')}
+          <p className="auth-hint"><Mail size={14} /> We'll email a code to confirm the address before the account is created.</p>
+        </form>
+      )}
+
+      {view === 'enter' && pending && (
+        <form className="form" onSubmit={(e) => { e.preventDefault(); confirm(); }} noValidate>
+          <p className="auth-sent"><Mail size={18} /> <span>We sent a 6-digit code to <b>{pending.email}</b>. It expires in {Math.round(pending.expires_in_seconds / 60)} minutes.</span></p>
+          <label className="form-field"><span>Code</span>
+            <input className="code-input" value={code} inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="••••••" autoFocus aria-label="6-digit code"
+              onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 6); setCode(v); if (v.length === 6) confirm(v); }} />
+          </label>
+          {error && <Notice kind="error">{error}</Notice>}
+          {submitBtn('Verify and continue')}
+          <p className="auth-links">
+            <button type="button" className="link-btn" disabled={cooldown > 0 || busy} onClick={resend}>{cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}</button>
+            <button type="button" className="link-btn" onClick={() => { setPending(null); go('code'); }}>Use a different email</button>
+          </p>
+          <p className="modal-fine">Can't find it? Check your spam or promotions folder.</p>
+        </form>
+      )}
+
+      {view !== 'enter' && (
+        <p className="modal-switch">
+          {view === 'register' ? 'Already have an account? ' : 'New to FlyCompare? '}
+          <button className="link-btn" onClick={() => go(view === 'register' ? 'code' : 'register')}>{view === 'register' ? 'Sign in' : 'Create an account with a password'}</button>
+        </p>
+      )}
+      <p className="modal-fine">Codes expire after a few minutes and work once. Passwords are stored as salted scrypt hashes; your session uses a secure HttpOnly cookie.</p>
     </Modal>
   );
 }

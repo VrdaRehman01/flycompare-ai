@@ -53,6 +53,26 @@ class Settings(BaseSettings):
     # climate history. Disable to run fully offline (tests do).
     travel_external_data_enabled: bool = True
 
+    # Keys the hashes of emailed sign-in codes. Must be a long random value in production
+    # (the API refuses to start with this default outside development).
+    secret_key: str = "dev-only-insecure-secret-change-me"
+
+    # Email delivery (sign-in and verification codes) over SMTP, e.g. Gmail with an App
+    # Password. Without SMTP_HOST, code sign-in reports itself unavailable.
+    smtp_host: str = ""
+    smtp_port: int = 587  # 587 = STARTTLS, 465 = SSL
+    smtp_username: str = ""
+    smtp_password: str = ""
+    email_from: str = ""  # defaults to SMTP_USERNAME (Gmail requires the account address)
+    email_from_name: str = "FlyCompare AI"
+    email_timeout_seconds: float = 15.0
+
+    # Emailed codes: lifetime, wrong attempts allowed, wait before resending, sends per email per hour.
+    login_code_ttl_minutes: int = 10
+    login_code_max_attempts: int = 5
+    login_code_resend_seconds: int = 60
+    login_codes_per_hour: int = 5
+
     # Browser sessions are opaque random tokens stored hashed in the database
     # and sent to the browser only as an HttpOnly cookie.
     session_cookie_name: str = "fc_session"

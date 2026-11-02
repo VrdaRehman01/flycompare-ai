@@ -85,11 +85,18 @@ def m0004_observation_airline_identity(conn: Connection) -> None:
     _add_missing_columns(conn, "fare_observations", {"airline_code": "VARCHAR(3)", "airline_logo_url": "VARCHAR(300)"})
 
 
+def m0005_email_verification(conn: Connection) -> None:
+    """Email verification time on users. Existing accounts start unverified and verify
+    once with an emailed code; the email_codes table itself is created by create_all."""
+    _add_missing_columns(conn, "users", {"email_verified_at": "TIMESTAMP"})
+
+
 MIGRATIONS: list[tuple[str, Callable[[Connection], None]]] = [
     ("0001_search_history_context", m0001_search_history_context),
     ("0002_passengers_multicity_connections", m0002_passengers_multicity_connections),
     ("0003_destination_image_sources", m0003_destination_image_sources),
     ("0004_observation_airline_identity", m0004_observation_airline_identity),
+    ("0005_email_verification", m0005_email_verification),
 ]
 
 

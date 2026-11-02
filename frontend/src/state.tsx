@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, errorText, setUnauthorizedHandler } from './lib/api';
 import { detectLocalCurrency } from './lib/currency';
 import { readThemePreference, resolveTheme, safeLocalStorage, writeThemePreference } from './lib/theme';
-import type { Flight, Preferences, Rates, SavedFlight, SearchForm, ThemePreference, User } from './lib/types';
+import type { CodePending, Flight, Preferences, Rates, SavedFlight, SearchForm, ThemePreference, User } from './lib/types';
 
 /* ---------------------------------------------------------------- toasts */
 
@@ -95,8 +95,12 @@ export type AuthPrompt = { mode: 'login' | 'register'; reason?: string; onSucces
 type AuthValue = {
   user: User | null; ready: boolean;
   prompt: AuthPrompt; openAuth: (mode?: 'login' | 'register', reason?: string, onSuccess?: () => void) => void; closeAuth: () => void;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  /** Password sign-in; returns a pending code when the email still has to be verified. */
+  login: (email: string, password: string) => Promise<CodePending | null>;
+  /** Starts registration: emails a code that creates the account once entered. */
+  register: (name: string, email: string, password: string) => Promise<CodePending>;
+  requestCode: (email: string) => Promise<CodePending>;
+  verifyCode: (email: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (u: User | null) => void;
   savePreferences: (p: Preferences) => Promise<void>;
@@ -175,12 +179,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     after?.();
   };
   const login = async (email: string, password: string) => {
-    const u = await api<User>('/api/auth/login', { method: 'POST', body: { email, password } });
-    finishAuth(u, `Welcome back, ${u.name.split(' ')[0]}.`);
+    const r = await api<User | CodePending>('/api/auth/login', { method: 'POST', body: { email, password } });
+    if ('verification_required' in r) return r;
+    finishAuth(r, `Welcome back, ${r.name.split(' ')[0]}.`);
+    return null;
   };
-  const register = async (name: string, email: string, password: string) => {
-    const u = await api<User>('/api/auth/register', { method: 'POST', body: { name, email, password } });
-    finishAuth(u, 'Your account is ready.');
+  const register = (name: string, email: string, password: string) =>
+    api<CodePending>('/api/auth/register', { method: 'POST', body: { name, email, password } });
+  const requestCode = (email: string) => api<CodePending>('/api/auth/code/request', { method: 'POST', body: { email } });
+  const verifyCode = async (email: string, code: string) => {
+    const u = await api<User>('/api/auth/code/verify', { method: 'POST', body: { email, code } });
+    finishAuth(u, `You're signed in as ${u.email}.`);
   };
   const logout = async () => {
     try { await api('/api/auth/logout', { method: 'POST' }); } catch (err) { toast('error', errorText(err)); return; }
@@ -239,7 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const value: AuthValue = {
-    user, ready, prompt, openAuth, closeAuth, login, register, logout, setUser: setUserState, savePreferences,
+    user, ready, prompt, openAuth, closeAuth, login, register, requestCode, verifyCode, logout, setUser: setUserState, savePreferences,
     favourites, toggleFavourite, saved, isSaved, toggleSaved, refreshSaved, recordView,
   };
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

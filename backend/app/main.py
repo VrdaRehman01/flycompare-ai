@@ -17,6 +17,8 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if not settings.is_development and settings.secret_key == "dev-only-insecure-secret-change-me":
+        raise RuntimeError("Set SECRET_KEY to a long random value before running outside development.")
     init_db()
     yield
 

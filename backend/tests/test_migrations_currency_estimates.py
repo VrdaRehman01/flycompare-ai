@@ -32,7 +32,7 @@ def test_migration_upgrades_existing_history_without_losing_rows():
         rows = conn.execute(text("SELECT id, origin_code, destination_code, user_id FROM flight_search_history ORDER BY id")).all()
         versions = conn.execute(text("SELECT version FROM schema_migrations")).scalars().all()
     assert rows == [(1, "KHI", "DXB", None), (2, "KHI", None, None)]
-    assert versions == ["0001_search_history_context", "0002_passengers_multicity_connections", "0003_destination_image_sources", "0004_observation_airline_identity"]
+    assert versions == ["0001_search_history_context", "0002_passengers_multicity_connections", "0003_destination_image_sources", "0004_observation_airline_identity", "0005_email_verification"]
     assert "users" in inspect(engine).get_table_names()
     engine.dispose()
 
