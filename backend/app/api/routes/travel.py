@@ -22,6 +22,12 @@ def _limit(request: Request) -> None:
     limiter.check(f"travel:{request.client.host if request.client else 'unknown'}", 60)
 
 
+def _demo_services() -> None:
+    """Stays, cars, transfers and tours have no real inventory provider yet."""
+    if not get_settings().demo_travel_services_enabled:
+        raise HTTPException(status_code=404, detail="This service is not available yet.")
+
+
 def _city(location: str):
     try:
         return resolve_city(location)
@@ -36,7 +42,7 @@ def _range(start: date, end: date, max_days: int, label: str) -> int:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/stays/search", summary="Hotels, apartments and other stays in a city", dependencies=[Depends(limit_search)])
+@router.get("/stays/search", summary="Hotels, apartments and other stays in a city", dependencies=[Depends(_demo_services), Depends(limit_search)])
 def stays_search(
     location: Location,
     check_in: date,
@@ -54,7 +60,7 @@ def stays_search(
             "adults": adults, "children": children, "rooms": rooms, **result}
 
 
-@router.get("/cars/search", summary="Car rental at an airport", dependencies=[Depends(_limit)])
+@router.get("/cars/search", summary="Car rental at an airport", dependencies=[Depends(_demo_services), Depends(_limit)])
 def cars_search(
     location: Location,
     pickup_date: date,
@@ -75,7 +81,7 @@ def cars_search(
     return {"city": city_summary(city), **ground_service.search_cars(city, code, pickup, dropoff, driver_age)}
 
 
-@router.get("/transfers/search", summary="Airport transfers to or from the city", dependencies=[Depends(_limit)])
+@router.get("/transfers/search", summary="Airport transfers to or from the city", dependencies=[Depends(_demo_services), Depends(_limit)])
 def transfers_search(
     location: Location,
     on: date = Query(alias="date"),
@@ -92,7 +98,7 @@ def transfers_search(
             **ground_service.search_transfers(city, code, on, at, passengers, bags, direction)}
 
 
-@router.get("/tours/search", summary="Group or private tours in a city", dependencies=[Depends(_limit)])
+@router.get("/tours/search", summary="Group or private tours in a city", dependencies=[Depends(_demo_services), Depends(_limit)])
 def tours_search(
     location: Location,
     on: date = Query(alias="date"),

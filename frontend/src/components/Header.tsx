@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { BarChart3, BookOpen, Bookmark, CarFront, Check, ChevronDown, Globe2, Heart, History, LogIn, LogOut, Menu, Monitor, Moon, Plane, Settings, Sun, User as UserIcon, UserPlus, UserRound, Users, Wand2, X } from 'lucide-react';
 import { errorText } from '../lib/api';
+import { useFeatures, type DemoService } from '../lib/features';
 import { navigate, type Route } from '../lib/router';
 import type { ThemePreference } from '../lib/types';
 import { useAuth, usePrefs } from '../state';
@@ -37,21 +38,27 @@ export function Header({ route }: { route: Route }) {
   const [mobileNav, setMobileNav] = useState(false);
   const active = route.page === 'results' || route.page === 'details' ? 'home' : route.page;
   const go = (r: Route) => { setMobileNav(false); navigate(r); };
-  const nav: { route: Route; label: string; key: string }[] = [
-    { route: { page: 'home' }, label: 'Flights', key: 'home' }, { route: { page: 'stays' }, label: 'Hotels & Homes', key: 'stays' },
-    { route: { page: 'packages' }, label: 'Flight & Hotel', key: 'packages' }, { route: { page: 'cars', tab: 'rental' }, label: 'Cars', key: 'cars' },
-    { route: { page: 'tours', kind: 'group' }, label: 'Tours', key: 'tours' }, { route: { page: 'deals' }, label: 'Deals', key: 'deals' },
+  // Services with only simulated inventory appear only when the API enables them.
+  const features = useFeatures();
+  const offered = <T extends { needs?: DemoService }>(items: T[]) => items.filter((i) => !i.needs || features.has(i.needs));
+  const travelServices = features.has('stays');
+  const nav = offered<{ route: Route; label: string; key: string; needs?: DemoService }>([
+    { route: { page: 'home' }, label: 'Flights', key: 'home' }, { route: { page: 'stays' }, label: 'Hotels & Homes', key: 'stays', needs: 'stays' },
+    { route: { page: 'packages' }, label: 'Flight & Hotel', key: 'packages', needs: 'packages' }, { route: { page: 'cars', tab: 'rental' }, label: 'Cars', key: 'cars', needs: 'cars' },
+    { route: { page: 'tours', kind: 'group' }, label: 'Tours', key: 'tours', needs: 'tours' }, { route: { page: 'deals' }, label: 'Deals', key: 'deals' },
     { route: { page: 'destinations' }, label: 'Destinations', key: 'destinations' },
-  ];
-  const more: { route: Route; label: string; hint: string; icon: ReactNode; key: string }[] = [
+    // With the travel services hidden there is room for Insights in the main bar again.
+    ...(travelServices ? [] : [{ route: { page: 'insights' } as Route, label: 'Insights', key: 'insights' }]),
+  ]);
+  const more = offered<{ route: Route; label: string; hint: string; icon: ReactNode; key: string; needs?: DemoService }>([
     { route: { page: 'planner' }, label: 'Trip planner', hint: 'Day-by-day itinerary and budget', icon: <Wand2 size={15} />, key: 'planner' },
     { route: { page: 'guides' }, label: 'Travel guides', hint: 'Sights, areas and best months', icon: <BookOpen size={15} />, key: 'guides' },
-    { route: { page: 'tours', kind: 'group' }, label: 'Group tours', hint: 'Shared guided tours', icon: <Users size={15} />, key: 'tours-group' },
-    { route: { page: 'tours', kind: 'private' }, label: 'Private tours', hint: 'Your own guide and car', icon: <UserRound size={15} />, key: 'tours-private' },
-    { route: { page: 'cars', tab: 'transfers' }, label: 'Airport transfers', hint: 'Airport ↔ city rides', icon: <CarFront size={15} />, key: 'transfers' },
-    { route: { page: 'insights' }, label: 'Insights', hint: 'Search and fare analytics', icon: <BarChart3 size={15} />, key: 'insights' },
-  ];
-  const moreActive = active === 'planner' || active === 'guides' || active === 'insights';
+    { route: { page: 'tours', kind: 'group' }, label: 'Group tours', hint: 'Shared guided tours', icon: <Users size={15} />, key: 'tours-group', needs: 'tours' },
+    { route: { page: 'tours', kind: 'private' }, label: 'Private tours', hint: 'Your own guide and car', icon: <UserRound size={15} />, key: 'tours-private', needs: 'tours' },
+    { route: { page: 'cars', tab: 'transfers' }, label: 'Airport transfers', hint: 'Airport ↔ city rides', icon: <CarFront size={15} />, key: 'transfers', needs: 'transfers' },
+    ...(travelServices ? [{ route: { page: 'insights' } as Route, label: 'Insights', hint: 'Search and fare analytics', icon: <BarChart3 size={15} />, key: 'insights' }] : []),
+  ]);
+  const moreActive = active === 'planner' || active === 'guides' || (travelServices && active === 'insights');
   const themeIcon = themePref === 'system' ? <Monitor size={16} /> : theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />;
   const themes: { value: ThemePreference; label: string; icon: ReactNode }[] = [
     { value: 'light', label: 'Light', icon: <Sun size={15} /> }, { value: 'dark', label: 'Dark', icon: <Moon size={15} /> }, { value: 'system', label: 'System', icon: <Monitor size={15} /> },

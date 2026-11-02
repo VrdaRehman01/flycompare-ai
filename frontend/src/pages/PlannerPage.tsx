@@ -9,6 +9,7 @@ import { GuestPicker, TravelHero, useTrip } from '../components/TravelUI';
 import { EmptyState, Loading, Notice, Price, SegmentedControl, useDisplayCurrency } from '../components/ui';
 import { api, errorText } from '../lib/api';
 import { fullDate, shortDate } from '../lib/format';
+import { useFeatures } from '../lib/features';
 import { navigate } from '../lib/router';
 import { INTERESTS, nightsBetween, type Budget, type Pace, type Plan, type PlanItem } from '../lib/travel';
 import type { AirportRef } from '../lib/types';
@@ -28,6 +29,7 @@ export function PlannerPage({ location, origin, onSearchRoute }: { location?: st
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedPlan[]>(readSaved);
   const toast = useToast();
+  const features = useFeatures();
 
   const make = async (e?: FormEvent) => {
     e?.preventDefault();
@@ -125,10 +127,10 @@ export function PlannerPage({ location, origin, onSearchRoute }: { location?: st
               <button className="book-link" disabled={!origin || origin.code === plan.city.airport} onClick={() => origin && onSearchRoute(origin.code, plan.city.airport, { departure: plan.start, returnDate: plan.end, tripType: 'round-trip' })}>
                 <Plane size={16} /><span><b>Flights</b><small>{origin ? `${origin.code} → ${plan.city.airport}, ${shortDate(plan.start)} – ${shortDate(plan.end)}` : 'Set your departure airport on the Flights page'}</small></span>
               </button>
-              <button className="book-link" onClick={() => navigate({ page: 'stays', location: plan.city.airport })}><BedDouble size={16} /><span><b>Stays</b><small>Hotels and homes for these dates</small></span></button>
-              <button className="book-link" onClick={() => navigate({ page: 'packages', location: plan.city.airport })}><Sparkles size={16} /><span><b>Flight & Hotel</b><small>See flight and stay together</small></span></button>
-              <button className="book-link" onClick={() => navigate({ page: 'tours', kind: 'group', location: plan.city.airport })}><Users size={16} /><span><b>Tours</b><small>Guided versions of these sights</small></span></button>
-              <button className="book-link" onClick={() => navigate({ page: 'cars', tab: 'transfers', location: plan.city.airport })}><Car size={16} /><span><b>Airport transfer</b><small>{plan.city.airports[0]?.name}</small></span></button>
+              {features.has('stays') && <button className="book-link" onClick={() => navigate({ page: 'stays', location: plan.city.airport })}><BedDouble size={16} /><span><b>Stays</b><small>Hotels and homes for these dates</small></span></button>}
+              {features.has('packages') && <button className="book-link" onClick={() => navigate({ page: 'packages', location: plan.city.airport })}><Sparkles size={16} /><span><b>Flight & Hotel</b><small>See flight and stay together</small></span></button>}
+              {features.has('tours') && <button className="book-link" onClick={() => navigate({ page: 'tours', kind: 'group', location: plan.city.airport })}><Users size={16} /><span><b>Tours</b><small>Guided versions of these sights</small></span></button>}
+              {features.has('transfers') && <button className="book-link" onClick={() => navigate({ page: 'cars', tab: 'transfers', location: plan.city.airport })}><Car size={16} /><span><b>Airport transfer</b><small>{plan.city.airports[0]?.name}</small></span></button>}
               <button className="book-link" onClick={() => navigate({ page: 'guides', location: plan.city.airport })}><BookOpen size={16} /><span><b>Travel guide</b><small>Areas, sights and tips</small></span></button>
             </section>
             {plan.tips.length > 0 && (

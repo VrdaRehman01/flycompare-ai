@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_optional
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.models import FlightSearchHistory, User
@@ -17,8 +18,9 @@ from app.services.history_service import history_rows
 router = APIRouter(prefix="/api", tags=["insights"])
 
 API_VERSION = "0.3.0"
-FEATURES = ["auth", "insights", "airports", "nearby", "destinations", "images", "multi-city", "passenger-types", "price-history",
-            "stays", "cars", "transfers", "tours", "guides", "planner", "packages"]
+FEATURES = ["auth", "insights", "airports", "nearby", "destinations", "images", "multi-city", "passenger-types", "price-history", "guides", "planner"]
+# Services that only have simulated inventory so far; advertised only when explicitly enabled.
+DEMO_FEATURES = ["stays", "cars", "transfers", "tours", "packages"]
 
 Code = Annotated[str, Query(pattern=r"^[A-Z]{3}$")]
 Cabin = Literal["Economy", "Premium economy", "Business", "First class"]
@@ -218,4 +220,6 @@ def route_price_history(origin: Code, destination: Code, db: Session = Depends(g
 @router.get("/meta", summary="API version and capabilities")
 def meta() -> dict:
     """Lets the frontend detect an outdated or missing API server."""
-    return {"service": "flycompare-api", "api_version": API_VERSION, "features": FEATURES}
+    settings = get_settings()
+    features = FEATURES + (DEMO_FEATURES if settings.demo_travel_services_enabled else [])
+    return {"service": "flycompare-api", "api_version": API_VERSION, "features": features}

@@ -4,7 +4,9 @@ import { AuthModal, Header } from './components/Header';
 import { api, errorText } from './lib/api';
 import { addDaysIso, rememberAirports, toRef, todayIso } from './lib/format';
 import { useDepartureAirport } from './lib/departure';
-import { navigate, readSession, useRoute, writeSession } from './lib/router';
+import { useFeatureState, type DemoService } from './lib/features';
+import { navigate, readSession, useRoute, writeSession, type Route } from './lib/router';
+import { Loading } from './components/ui';
 import type { Airport, AirportRef, Flight, SearchForm, SearchResponse, SearchState, TripType } from './lib/types';
 import { emptyForm, isCurrentForm, searchBody } from './lib/validation';
 import { AccountPage } from './pages/AccountPage';
@@ -49,6 +51,7 @@ async function lookupAirports(codes: string[]): Promise<AirportRef[]> {
 
 function Shell() {
   const route = useRoute();
+  const features = useFeatureState();
   const { user, recordView } = useAuth();
   const departure = useDepartureAirport(user?.preferences.home_airport);
   const [form, setForm] = useState<SearchForm>(() => emptyForm(departure.origin));
@@ -143,8 +146,13 @@ function Shell() {
   };
 
   const origin = departure.origin;
+  // Services with only simulated inventory are reachable only when the API enables them.
+  const gated: Partial<Record<Route['page'], DemoService>> = { stays: 'stays', packages: 'packages', cars: 'cars', tours: 'tours' };
+  const needs = gated[route.page];
   let page;
-  switch (route.page) {
+  if (needs && !features) page = <div className="container page"><Loading /></div>;
+  else if (needs && !features?.has(needs)) page = <NotAvailable />;
+  else switch (route.page) {
     case 'results':
       page = search ? <ResultsPage key={search.searchedAt} search={search} onEdit={() => { setForm(search.query); navigate({ page: 'home' }); }} onSelect={(f) => select(f)} /> : <NoSearch />;
       break;
@@ -189,10 +197,20 @@ function Shell() {
       <footer className="footer">
         <div className="footer-inner">
           <a className="brand" href="#/"><span className="brand-mark"><Plane size={16} /></span><span>FlyCompare <b>AI</b></span></a>
-          <p>Compare complete journeys: flights, stays, cars and tours. FlyCompare compares offers; it does not sell or issue tickets.</p>
+          <p>Compare complete journeys. FlyCompare compares offers; it does not sell or issue tickets.</p>
           <span>Airport data: OurAirports · Map: Natural Earth · © {new Date().getFullYear()} FlyCompare AI</span>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function NotAvailable() {
+  return (
+    <div className="container page">
+      <div className="card empty-state"><Plane size={32} /><h3>Not available yet</h3>
+        <p>This service is coming soon. We only show offers from real providers, and none is connected for it yet.</p>
+        <button className="btn btn-primary" onClick={() => navigate({ page: 'home' })}>Search flights</button></div>
     </div>
   );
 }

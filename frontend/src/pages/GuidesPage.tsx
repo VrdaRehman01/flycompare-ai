@@ -7,6 +7,7 @@ import { DestinationPhoto } from '../components/DestinationCard';
 import { TravelHero } from '../components/TravelUI';
 import { EmptyState, Loading, Notice, Price } from '../components/ui';
 import { api, errorText } from '../lib/api';
+import { useFeatures } from '../lib/features';
 import { navigate } from '../lib/router';
 import type { Guide, GuideCard } from '../lib/travel';
 import type { AirportRef } from '../lib/types';
@@ -58,6 +59,7 @@ function GuideList() {
 
 function GuideDetail({ location, origin, onSearchRoute }: { location: string; origin: AirportRef | null; onSearchRoute: SearchRouteFn }) {
   const [g, setG] = useState<Guide | null>(null);
+  const features = useFeatures();
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     setG(null); setError(null);
@@ -77,8 +79,8 @@ function GuideDetail({ location, origin, onSearchRoute }: { location: string; or
           <p className="muted">{g.country}{g.tagline ? ` · ${g.tagline}` : ''}</p>
           <div className="guide-actions">
             <button className="btn btn-primary" onClick={() => navigate({ page: 'planner', location: code })}><CalendarRange size={15} /> Plan a trip</button>
-            <button className="btn btn-soft" onClick={() => navigate({ page: 'stays', location: code })}><BedDouble size={15} /> Stays</button>
-            <button className="btn btn-soft" onClick={() => navigate({ page: 'tours', kind: 'group', location: code })}><Users size={15} /> Tours</button>
+            {features.has('stays') && <button className="btn btn-soft" onClick={() => navigate({ page: 'stays', location: code })}><BedDouble size={15} /> Stays</button>}
+            {features.has('tours') && <button className="btn btn-soft" onClick={() => navigate({ page: 'tours', kind: 'group', location: code })}><Users size={15} /> Tours</button>}
             {origin && origin.code !== code && <button className="btn btn-ghost" onClick={() => onSearchRoute(origin.code, code)}><Plane size={15} /> Flights from {origin.code}</button>}
           </div>
         </div>
@@ -141,7 +143,7 @@ function GuideDetail({ location, origin, onSearchRoute }: { location: string; or
                   <p>{a.blurb}</p>
                 </div>
               ))}
-              <button className="btn btn-soft full" onClick={() => navigate({ page: 'stays', location: code })}><BedDouble size={15} /> Compare stays in {g.city}</button>
+              {features.has('stays') && <button className="btn btn-soft full" onClick={() => navigate({ page: 'stays', location: code })}><BedDouble size={15} /> Compare stays in {g.city}</button>}
             </section>
           )}
           {g.tips.length > 0 && (

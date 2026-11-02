@@ -23,11 +23,9 @@ class Settings(BaseSettings):
     app_debug: bool = True
     api_v1_prefix: str = "/api"
 
-    database_url: str = (
-        "postgresql+psycopg://flycompare:change-me-local-only"
-        "@localhost:5432/flycompare"
-    )
-    redis_url: str = "redis://localhost:6379/0"
+    # SQLite needs no setup for local development; use PostgreSQL in production, e.g.
+    # postgresql+psycopg://user:password@host:5432/flycompare
+    database_url: str = "sqlite:///./flycompare.db"
 
     cors_origins: list[str] = Field(
         default_factory=lambda: [
@@ -38,9 +36,8 @@ class Settings(BaseSettings):
         ]
     )
 
-    jwt_secret_key: str = "development-only-change-this-secret"
-    jwt_access_token_expire_minutes: int = 30
-
+    # "mock" (simulated demo offers, development only) or "duffel". Outside development
+    # only providers returning live data are allowed; see build_flight_provider.
     flight_provider: str = "mock"
     duffel_access_token: str | None = None
     duffel_api_url: str = "https://api.duffel.com"
@@ -49,6 +46,9 @@ class Settings(BaseSettings):
     # Accommodation: "auto" uses Duffel Stays when FLIGHT_PROVIDER=duffel (falling back to
     # demo stays if Stays is not enabled on the account), "duffel" always tries it, "demo" never does.
     stays_provider: str = "auto"
+    # Stays, cars, transfers, tours and flight + hotel have no real inventory provider yet
+    # and would show simulated options, so they are hidden unless explicitly enabled.
+    demo_travel_services_enabled: bool = False
     # Travel guides and the trip planner fetch Wikipedia summaries and Open-Meteo
     # climate history. Disable to run fully offline (tests do).
     travel_external_data_enabled: bool = True
@@ -82,10 +82,15 @@ class Settings(BaseSettings):
     fare_model_path: str = "ml/models/fare_log_ridge_model.joblib"
 
     @property
+    def is_development(self) -> bool:
+        """Local development or automated tests; anything else is treated as production."""
+        return self.app_env.strip().lower() in {"development", "dev", "local", "test"}
+
+    @property
     def secure_cookies(self) -> bool:
         if self.session_cookie_secure is not None:
             return self.session_cookie_secure
-        return self.app_env.strip().lower() not in {"development", "dev", "local", "test"}
+        return not self.is_development
 
 
 @lru_cache

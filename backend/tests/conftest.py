@@ -9,6 +9,8 @@ os.environ["APP_ENV"] = "test"
 os.environ["CURRENCY_API_URL"] = "http://currency.invalid/v1"
 os.environ["CURRENCY_FALLBACK_API_URL"] = ""
 os.environ["STAYS_PROVIDER"] = "demo"
+# The simulated travel services are off by default; their tests exercise the logic directly.
+os.environ["DEMO_TRAVEL_SERVICES_ENABLED"] = "true"
 os.environ["TRAVEL_EXTERNAL_DATA_ENABLED"] = "false"
 
 import pytest  # noqa: E402

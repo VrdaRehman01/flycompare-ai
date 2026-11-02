@@ -9,6 +9,7 @@ import { HeroCredit, HeroPhoto } from '../components/HeroPhoto';
 import { api } from '../lib/api';
 import { dayMonth, todayIso } from '../lib/format';
 import type { GeoState } from '../lib/geo';
+import { useFeatures, type DemoService } from '../lib/features';
 import { navigate, type Route } from '../lib/router';
 import type { AirportRef, HistoryItem, SearchForm } from '../lib/types';
 import { passengerSummary } from '../lib/validation';
@@ -16,14 +17,16 @@ import { useAuth } from '../state';
 
 type Recent = { key: string; title: string; dates: string; future: boolean; run: () => void };
 
-const SERVICES: { label: string; hint: string; icon: ReactNode; withCity: boolean; route: (dest?: string) => Route }[] = [
-  { label: 'Hotels & Homes', hint: 'Hotels, apartments and resorts', icon: <Hotel size={20} />, withCity: true, route: (d) => ({ page: 'stays', location: d }) },
-  { label: 'Flight & Hotel', hint: 'One price for the whole trip', icon: <Package size={20} />, withCity: false, route: (d) => ({ page: 'packages', location: d }) },
-  { label: 'Cars & transfers', hint: 'Rentals and airport rides', icon: <CarFront size={20} />, withCity: true, route: (d) => ({ page: 'cars', tab: 'rental', location: d }) },
-  { label: 'Group tours', hint: 'Guided, priced per person', icon: <Users size={20} />, withCity: true, route: (d) => ({ page: 'tours', kind: 'group', location: d }) },
-  { label: 'Private tours', hint: 'Your own guide and car', icon: <UserRound size={20} />, withCity: true, route: (d) => ({ page: 'tours', kind: 'private', location: d }) },
+const SERVICES: { label: string; hint: string; icon: ReactNode; withCity: boolean; needs?: DemoService; route: (dest?: string) => Route }[] = [
+  { label: 'Hotels & Homes', hint: 'Hotels, apartments and resorts', icon: <Hotel size={20} />, withCity: true, needs: 'stays', route: (d) => ({ page: 'stays', location: d }) },
+  { label: 'Flight & Hotel', hint: 'One price for the whole trip', icon: <Package size={20} />, withCity: false, needs: 'packages', route: (d) => ({ page: 'packages', location: d }) },
+  { label: 'Cars & transfers', hint: 'Rentals and airport rides', icon: <CarFront size={20} />, withCity: true, needs: 'cars', route: (d) => ({ page: 'cars', tab: 'rental', location: d }) },
+  { label: 'Group tours', hint: 'Guided, priced per person', icon: <Users size={20} />, withCity: true, needs: 'tours', route: (d) => ({ page: 'tours', kind: 'group', location: d }) },
+  { label: 'Private tours', hint: 'Your own guide and car', icon: <UserRound size={20} />, withCity: true, needs: 'tours', route: (d) => ({ page: 'tours', kind: 'private', location: d }) },
   { label: 'Trip planner', hint: 'Day-by-day plan and budget', icon: <Wand2 size={20} />, withCity: false, route: (d) => ({ page: 'planner', location: d }) },
   { label: 'Travel guides', hint: 'Best months, sights, areas', icon: <BookOpen size={20} />, withCity: false, route: (d) => ({ page: 'guides', location: d }) },
+  { label: 'Deals', hint: 'Low fares seen in searches', icon: <TrendingDown size={20} />, withCity: false, route: () => ({ page: 'deals' }) },
+  { label: 'Destinations', hint: 'Ideas by theme and region', icon: <Search size={20} />, withCity: false, route: () => ({ page: 'destinations' }) },
 ];
 
 type Props = {
@@ -34,6 +37,7 @@ type Props = {
 
 export default function HomePage({ form, update, onOriginChange, onSearch, loading, error, historyVersion, onExplore, onSearchRoute, location }: Props) {
   const { user, ready } = useAuth();
+  const features = useFeatures();
   const [recent, setRecent] = useState<Recent[] | null>(null);
   const today = todayIso();
 
@@ -90,7 +94,7 @@ export default function HomePage({ form, update, onOriginChange, onSearch, loadi
       <section className="container section">
         <div className="section-head"><h2>Plan the whole trip</h2><span className="muted small">Everything after the flight, in one place</span></div>
         <div className="services-grid">
-          {SERVICES.map((s) => {
+          {SERVICES.filter((s) => !s.needs || features.has(s.needs)).map((s) => {
             const dest = form.destination?.code;
             return (
               <button key={s.label} className="card service-tile" onClick={() => navigate(s.route(dest))}>
