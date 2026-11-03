@@ -6,6 +6,7 @@ services:
     name: flycompare-api
     runtime: python
     plan: free
+    region: ohio                   # same region as the Neon database (AWS US East 2)
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     # --proxy-headers: behind Vercel and Render, rate limits must use the visitor's IP.
