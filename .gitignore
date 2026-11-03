@@ -48,3 +48,5 @@ log_model_error_analysis.csv
 # Python package/build artifacts
 *.egg-info/
 build/
+# Private security notes (kept locally, never published)
+docs/SECURITY.md
