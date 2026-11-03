@@ -89,6 +89,13 @@ def test_unsupported_searches_are_explained(provider):
     multi = FlightSearchRequest(origin="LHE", destination="IST", departure_date=DEP, trip_type="multi-city", legs=legs)
     with pytest.raises(tp.TravelpayoutsError, match="Multi-city"):
         provider.search(multi)
+    # The source rejects round trips longer than 30 days (HTTP 400): explained, never sent.
+    long_trip = FlightSearchRequest(origin="LHE", destination="DXB", departure_date=DEP, return_date=DEP + timedelta(days=31), trip_type="round-trip")
+    with pytest.raises(tp.TravelpayoutsError, match="up to 30 days"):
+        provider.search(long_trip)
+    assert provider.nearby_dates(long_trip) == [] and not provider.calls
+    month = FlightSearchRequest(origin="LHE", destination="DXB", departure_date=DEP, return_date=DEP + timedelta(days=30), trip_type="round-trip")
+    provider.search(month)
 
 
 def test_search_route_stores_recent_observations_and_reports_errors(client, db_session, provider, monkeypatch):

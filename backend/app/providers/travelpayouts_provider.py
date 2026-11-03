@@ -33,6 +33,7 @@ AIRLINES_URL = "https://api.travelpayouts.com/data/en/airlines.json"
 LOGO_URL = "https://pics.avs.io/120/120/{code}.png"
 BOOKING_HOST = "https://www.aviasales.com"
 CACHE_SECONDS = 15 * 60  # Travelpayouts asks partners to cache Data API answers
+MAX_TRIP_DAYS = 30  # the Data API answers HTTP 400 when the return is later than this
 
 _airline_names: dict[str, str] | None = None
 _cache: dict[tuple, tuple[float, list[dict]]] = {}
@@ -50,6 +51,11 @@ def _local(moment: datetime, airport_code: str) -> datetime:
         return moment.astimezone(ZoneInfo(airport.tz)) if airport and airport.tz else moment
     except ZoneInfoNotFoundError:
         return moment
+
+
+def _too_long(request: FlightSearchRequest) -> bool:
+    return (request.trip_type == "round-trip" and request.return_date is not None
+            and (request.return_date - request.departure_date).days > MAX_TRIP_DAYS)
 
 
 class TravelpayoutsFlightProvider:
@@ -129,6 +135,9 @@ class TravelpayoutsFlightProvider:
             raise TravelpayoutsError("Multi-city trips aren't available from the current fare source. Search each flight separately.")
         if request.cabin != "Economy":
             raise TravelpayoutsError("The current fare source has economy fares only. Choose Economy to see prices.")
+        if _too_long(request):
+            raise TravelpayoutsError(f"The current fare source only covers round trips of up to {MAX_TRIP_DAYS} days. "
+                                     "Choose an earlier return date, or search the two flights as separate one-way trips.")
         travellers = request.adults + request.children
         retrieved = datetime.now(timezone.utc)
         # The same itinerary is often reported by several agencies or fare types: keep the cheapest.
@@ -149,7 +158,7 @@ class TravelpayoutsFlightProvider:
         is often empty while the days around it are not. Querying the whole month(s)
         returns those real fares; the cheapest per date pair is offered, nearest first.
         """
-        if request.trip_type == "multi-city" or request.cabin != "Economy":
+        if request.trip_type == "multi-city" or request.cabin != "Economy" or _too_long(request):
             return []
         round_trip = request.trip_type == "round-trip" and request.return_date is not None
         params = {
