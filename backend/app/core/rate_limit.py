@@ -1,7 +1,7 @@
 """Small in-process sliding-window rate limiter.
 
 Suitable for a single API process. A multi-process deployment should move this
-to Redis (already part of docker-compose) so limits are shared.
+to a shared store such as Redis so limits apply across processes.
 """
 
 import logging
