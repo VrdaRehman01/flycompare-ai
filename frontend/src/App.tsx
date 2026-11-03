@@ -168,7 +168,8 @@ function Shell() {
   else if (needs && !features?.has(needs)) page = <NotAvailable />;
   else switch (route.page) {
     case 'results':
-      page = search ? <ResultsPage key={search.searchedAt} search={search} onEdit={() => { setForm(search.query); navigate({ page: 'home' }); }} onSelect={(f) => select(f)} /> : <NoSearch />;
+      page = search ? <ResultsPage key={search.searchedAt} search={search} onEdit={() => { setForm(search.query); navigate({ page: 'home' }); }} onSelect={(f) => select(f)}
+        onSearchDates={(departure, returnDate) => runSearch({ ...search.query, departure, returnDate: returnDate ?? search.query.returnDate })} /> : <NoSearch />;
       break;
     case 'details':
       page = selected ? <DetailsPage flight={selected} query={search?.query ?? null} hasResults={!!search} /> : <NoSearch text="Choose a flight from your search results to see its full itinerary." />;

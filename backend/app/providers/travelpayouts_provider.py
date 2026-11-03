@@ -107,6 +107,9 @@ class TravelpayoutsFlightProvider:
         }
         if round_trip and request.return_date:
             params["return_at"] = request.return_date.isoformat()
+        return self._query(params)
+
+    def _query(self, params: dict) -> list[dict]:
         key = tuple(sorted(params.items()))
         now = time.time()
         with _lock:
@@ -138,6 +141,44 @@ class TravelpayoutsFlightProvider:
             if key not in best or offer.price < best[key].price:
                 best[key] = offer
         return sorted(best.values(), key=lambda o: o.price)
+
+    def nearby_dates(self, request: FlightSearchRequest, limit: int = 6) -> list[dict]:
+        """Closest dates that do have recent fares, for when the exact dates have none.
+
+        The source only holds fares that users recently found, so an exact pair of dates
+        is often empty while the days around it are not. Querying the whole month(s)
+        returns those real fares; the cheapest per date pair is offered, nearest first.
+        """
+        if request.trip_type == "multi-city" or request.cabin != "Economy":
+            return []
+        round_trip = request.trip_type == "round-trip" and request.return_date is not None
+        params = {
+            "origin": request.origin_code, "destination": request.destination_code,
+            "departure_at": request.departure_date.strftime("%Y-%m"), "one_way": "false" if round_trip else "true",
+            "currency": "usd", "sorting": "price", "direct": "false", "limit": 100, "page": 1,
+        }
+        if round_trip:
+            params["return_at"] = request.return_date.strftime("%Y-%m")
+        cheapest: dict[tuple, float] = {}
+        for fare in self._query(params):
+            try:
+                out = datetime.fromisoformat(fare["departure_at"]).date()
+                back = datetime.fromisoformat(fare["return_at"]).date() if round_trip else None
+                price = float(fare["price"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if out < datetime.now(timezone.utc).date() or (back is not None and back < out):
+                continue
+            if (out, back) not in cheapest or price < cheapest[(out, back)]:
+                cheapest[(out, back)] = price
+
+        def distance(pair: tuple) -> int:
+            out, back = pair
+            return abs((out - request.departure_date).days) + (abs((back - request.return_date).days) if back else 0)
+
+        pairs = sorted(cheapest, key=lambda p: (distance(p), cheapest[p]))[:limit]
+        return [{"departure_date": out.isoformat(), "return_date": back.isoformat() if back else None,
+                 "price": round(cheapest[(out, back)], 2), "currency": "USD"} for out, back in pairs]
 
     def _map(self, fare: dict, request: FlightSearchRequest, travellers: int, retrieved: datetime) -> FlightOffer | None:
         try:

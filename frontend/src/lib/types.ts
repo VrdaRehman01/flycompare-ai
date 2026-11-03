@@ -55,7 +55,8 @@ export type SearchForm = {
   tripType: TripType; origin: AirportRef | null; destination: AirportRef | null; departure: string; returnDate: string;
   passengers: Passengers; cabin: Cabin; legs: Leg[];
 };
-export type SearchResponse = { data_status: DataStatus; source_message: string; results: Flight[]; search_id?: number | null; provider?: string | null };
+export type NearbyDate = { departure_date: string; return_date: string | null; price: number; currency: string };
+export type SearchResponse = { data_status: DataStatus; source_message: string; results: Flight[]; search_id?: number | null; provider?: string | null; nearby_dates?: NearbyDate[] };
 export type SearchState = { query: SearchForm; response: SearchResponse; searchedAt: string };
 
 export type HistoryItem = {

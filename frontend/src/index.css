@@ -492,6 +492,16 @@ main { flex: 1; }
 
 .empty-state .btn { margin-top: 8px; }
 
+.nearby-dates { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; width: 100%; max-width: 620px; margin-top: 6px; }
+
+.nearby-date { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+
+.nearby-date:hover, .nearby-date:focus-visible { border-color: var(--blue); box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 15%, transparent); }
+
+.nearby-date span { font-weight: 600; }
+
+.nearby-date small { color: var(--muted); font-size: 12px; }
+
 
 
 /* ---------------------------------------------------------------- details */

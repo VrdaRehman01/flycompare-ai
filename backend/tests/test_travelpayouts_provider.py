@@ -108,6 +108,41 @@ def test_search_route_stores_recent_observations_and_reports_errors(client, db_s
     assert failed.status_code == 502 and "rejected the API token" in failed.json()["detail"]
 
 
+def test_nearby_dates_offer_the_cheapest_fare_per_date_pair_nearest_first(provider):
+    near = {**FARES[0], "departure_at": f"{DEP + timedelta(days=1)}T08:00:00+05:00", "return_at": f"{RET}T08:00:00+04:00", "price": 300}
+    far = {**FARES[0], "departure_at": f"{DEP + timedelta(days=9)}T08:00:00+05:00", "return_at": f"{RET + timedelta(days=9)}T08:00:00+04:00", "price": 99}
+    past = {**FARES[0], "departure_at": "2020-01-01T08:00:00+05:00", "return_at": "2020-01-05T08:00:00+04:00", "price": 1}
+    FARES.extend([near, far, past])
+    try:
+        dates = provider.nearby_dates(_round_trip())
+    finally:
+        del FARES[-3:]
+    assert [(d["departure_date"], d["return_date"], d["price"]) for d in dates] == [
+        (DEP.isoformat(), RET.isoformat(), 390),  # the exact pair, cheapest of its fares
+        ((DEP + timedelta(days=1)).isoformat(), RET.isoformat(), 300),
+        ((DEP + timedelta(days=9)).isoformat(), (RET + timedelta(days=9)).isoformat(), 99),
+    ]
+    month_query = provider.calls[-1][1]
+    assert month_query["departure_at"] == DEP.strftime("%Y-%m") and month_query["return_at"] == RET.strftime("%Y-%m")
+    assert provider.nearby_dates(_round_trip(cabin="Business")) == []
+
+
+def test_empty_exact_dates_suggest_nearby_dates(client, provider, monkeypatch):
+    monkeypatch.setattr(get_settings(), "flight_provider", "travelpayouts")
+
+    def month_only(self, url, params=None):
+        if url == tp.AIRLINES_URL:
+            return []
+        exact = len(params["departure_at"]) == 10
+        return {"success": True, "data": [] if exact else FARES[:1]}
+
+    monkeypatch.setattr(tp.TravelpayoutsFlightProvider, "_get", month_only)
+    body = {"origin": "LHE", "destination": "DXB", "departure_date": future(50), "return_date": future(55), "trip_type": "round-trip"}
+    response = client.post("/api/flights/search", json=body).json()
+    assert response["results"] == []
+    assert response["nearby_dates"] == [{"departure_date": DEP.isoformat(), "return_date": RET.isoformat(), "price": 425.0, "currency": "USD"}]
+
+
 def test_recent_fares_count_as_real_data_in_production(monkeypatch):
     settings = get_settings()
     monkeypatch.setattr(settings, "flight_provider", "travelpayouts")

@@ -248,9 +248,20 @@ class FlightOffer(BaseModel):
     price_is_estimate: bool = False
 
 
+class NearbyDate(BaseModel):
+    """Other dates with real fares on the same route (price for one adult)."""
+
+    departure_date: date
+    return_date: date | None = None
+    price: float
+    currency: str
+
+
 class FlightSearchResponse(BaseModel):
     data_status: Literal["demo", "test", "live", "recent"] = "demo"
     source_message: str
     results: list[FlightOffer]
     search_id: int | None = None
     provider: str | None = None
+    # Only filled when the exact dates returned nothing and the provider knows other dates.
+    nearby_dates: list[NearbyDate] = Field(default_factory=list)

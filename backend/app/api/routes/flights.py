@@ -15,7 +15,7 @@ from app.core.rate_limit import limit_search, limiter
 from app.models import FlightSearchHistory, User
 from app.providers.errors import FlightProviderError
 from app.providers.factory import ProviderConfigError, build_flight_provider
-from app.schemas.flight import FlightSearchRequest, FlightSearchResponse
+from app.schemas.flight import FlightSearchRequest, FlightSearchResponse, NearbyDate
 from app.services import search_service
 from app.services.history_service import history_rows
 
@@ -90,7 +90,13 @@ def search_flights(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     history = search_service.record_search(db, request, results, provider.name, data_status, user)
-    return search_service.build_response(results, data_status, provider.name, history.id)
+    response = search_service.build_response(results, data_status, provider.name, history.id)
+    if not results and hasattr(provider, "nearby_dates"):
+        try:
+            response.nearby_dates = [NearbyDate(**d) for d in provider.nearby_dates(request)]
+        except FlightProviderError as exc:
+            logger.warning("Nearby dates unavailable (%s): %s", type(provider).__name__, exc)
+    return response
 
 
 @router.get("/history", summary="Get the signed-in user's recent searches")
