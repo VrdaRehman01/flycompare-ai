@@ -1,0 +1,9 @@
+{
+  "_comment": "Security headers for the website. Mirrored in vercel.json (production) and used by `vite preview` (local check). Keep the two in sync.",
+  "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.wikimedia.org https://assets.duffel.com https://images.kiwi.com https://pics.avs.io; connect-src 'self'; worker-src 'self' blob:; child-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+  "X-Frame-Options": "DENY",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), payment=(), geolocation=(self)",
+  "Cross-Origin-Opener-Policy": "same-origin"
+}

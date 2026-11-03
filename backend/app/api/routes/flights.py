@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user_optional
+from app.api.deps import get_current_user_optional, require_csrf_header
 from app.core.config import BACKEND_DIR, ENV_FILES, REPO_ROOT, get_settings
 from app.core.database import get_db
 from app.core.rate_limit import limit_search, limiter
@@ -34,10 +34,15 @@ def get_flight_provider():
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-@router.get("/provider", summary="Diagnose the active flight provider")
+@router.get("/provider", summary="Diagnose the active flight provider", include_in_schema=False)
 def provider_diagnostic() -> dict:
-    """Safe runtime diagnostics; never returns the API token or its contents."""
+    """Development-only diagnostics; never returns the API token or its contents.
+
+    Outside development it does not exist (404): configuration details are not public.
+    """
     settings = get_settings()
+    if not settings.is_development:
+        raise HTTPException(status_code=404, detail="Not Found")
     provider, data_status = get_flight_provider()
     token = settings.duffel_access_token or ""
     info = {
@@ -63,7 +68,7 @@ def provider_diagnostic() -> dict:
     return info
 
 
-@router.post("/search", response_model=FlightSearchResponse, summary="Search flight offers", dependencies=[Depends(limit_search)])
+@router.post("/search", response_model=FlightSearchResponse, summary="Search flight offers", dependencies=[Depends(require_csrf_header), Depends(limit_search)])
 def search_flights(
     request: FlightSearchRequest,
     db: Session = Depends(get_db),

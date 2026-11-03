@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { createImageStore } from '../lib/destinationImages';
 import type { Destination, DestinationImage } from '../lib/types';
 import { availabilityLabel } from './Discovery';
+import { safeUrl } from '../lib/safeUrl';
 
 const TONES: Record<string, CityTone> = {
   'Dubai|AE': 'dubai', 'Istanbul|TR': 'istanbul', 'London|GB': 'london', 'Bangkok|TH': 'bangkok', 'Doha|QA': 'doha',
@@ -54,7 +55,7 @@ export function DestinationPhoto({ dest, eager }: { dest: Pick<Destination, 'key
       )}
       {state === 'loading' && <span className="photo-shimmer" aria-hidden="true" />}
       {photo && loaded && (
-        <a className="photo-credit" href={photo.file_url} target="_blank" rel="noreferrer noopener" onClick={(e) => e.stopPropagation()}
+        <a className="photo-credit" href={safeUrl(photo.file_url)} target="_blank" rel="noreferrer noopener" onClick={(e) => e.stopPropagation()}
           title={`Photo: ${photo.artist} · ${photo.licence} · via ${photo.source ?? 'Wikimedia Commons'}`}>
           <Camera size={10} aria-hidden="true" /> {photo.artist?.slice(0, 28)} · {photo.licence}
         </a>

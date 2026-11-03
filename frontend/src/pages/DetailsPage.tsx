@@ -15,6 +15,7 @@ import { navigate, readSession, writeSession } from '../lib/router';
 import { totalDurationOf } from '../lib/results';
 import type { Airport, AirportRef, Amenity, Baggage, FareCondition, Flight, OfferDetails, SearchForm, Segment, SeatMapResponse } from '../lib/types';
 import { useAuth } from '../state';
+import { safeUrl } from '../lib/safeUrl';
 
 const TABS: DetailsTab[] = ['Baggage', 'Fare conditions', 'Aircraft', 'Amenities', 'Seats'];
 const NOT_SUPPLIED = 'Not supplied by this provider';
@@ -176,7 +177,7 @@ export function DetailsPage({ flight: f, query, hasResults }: { flight: Flight; 
           {f.supports_extra_services && <button className="btn btn-ghost small" onClick={loadOffer} disabled={offer.state === 'loading'}>{offer.state === 'loading' ? <span className="spinner dark" /> : <RefreshCw size={14} />} Re-check price</button>}
           {offer.state === 'error' && <Notice kind="error">{offer.error}</Notice>}
           {f.booking_url && (
-            <a className="btn btn-primary full" href={f.booking_url} target="_blank" rel="noreferrer noopener sponsored">
+            <a className="btn btn-primary full" href={safeUrl(f.booking_url)} target="_blank" rel="noreferrer noopener sponsored">
               <ExternalLink size={15} /> Check price &amp; book{f.sold_by ? ` with ${f.sold_by}` : ''}
             </a>
           )}
@@ -185,7 +186,7 @@ export function DetailsPage({ flight: f, query, hasResults }: { flight: Flight; 
               : f.data_status === 'recent' ? `Recent fare, not a live quote: the price and seats are confirmed on Aviasales${f.sold_by ? ` (sold by ${f.sold_by})` : ''}. FlyCompare does not issue tickets.${f.price_is_estimate ? ' The total is estimated from the fare for one adult.' : ''}`
               : 'Sandbox or demo offer: not bookable.'}
           </p>
-          {(current?.conditions_of_carriage_url ?? f.conditions_of_carriage_url) && <a className="link-btn small" href={(current?.conditions_of_carriage_url ?? f.conditions_of_carriage_url)!} target="_blank" rel="noreferrer noopener"><ExternalLink size={13} /> Airline conditions of carriage</a>}
+          {(current?.conditions_of_carriage_url ?? f.conditions_of_carriage_url) && <a className="link-btn small" href={safeUrl(current?.conditions_of_carriage_url ?? f.conditions_of_carriage_url)} target="_blank" rel="noreferrer noopener"><ExternalLink size={13} /> Airline conditions of carriage</a>}
         </aside>
       </div>
     </div>
@@ -275,7 +276,7 @@ function ConditionsTab({ f }: { f: Flight }) {
           <tbody>{legs.map((l, i) => <tr key={i}><td>{l.origin} → {l.destination}</td><td>{l.fare_brand_name ?? 'Unknown'}</td><td>{perk(l.priority_check_in)}</td><td>{perk(l.priority_boarding)}</td><td>{perk(l.advance_seat_selection)}</td></tr>)}</tbody>
         </table>
       )}
-      <p className="muted small tab-note">Conditions apply to the whole booking as supplied by {f.provider}. "Unknown" means the provider did not say — it does not mean the option is unavailable. Full ticket rules are set by the airline{f.conditions_of_carriage_url ? <> (<a href={f.conditions_of_carriage_url} target="_blank" rel="noreferrer noopener">conditions of carriage</a>)</> : ''}.</p>
+      <p className="muted small tab-note">Conditions apply to the whole booking as supplied by {f.provider}. "Unknown" means the provider did not say — it does not mean the option is unavailable. Full ticket rules are set by the airline{f.conditions_of_carriage_url ? <> (<a href={safeUrl(f.conditions_of_carriage_url)} target="_blank" rel="noreferrer noopener">conditions of carriage</a>)</> : ''}.</p>
     </>
   );
 }

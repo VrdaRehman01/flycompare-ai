@@ -21,11 +21,12 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.security import is_password_hash
 from app.models import EmailCode, User
 from app.services import email_service
 
 PURPOSES = ("login", "register")
-UNUSABLE_PASSWORD = "!"  # stored for accounts created by code sign-in; never verifies
+UNUSABLE_PASSWORD = "!"  # nosec B105 - a marker, not a password: never matches any hash, so password sign-in is impossible
 
 
 def _now() -> datetime:
@@ -145,4 +146,4 @@ def account_for(db: Session, row: EmailCode, name: str | None = None) -> User:
 
 
 def has_password(user: User) -> bool:
-    return user.password_hash.startswith("scrypt$")
+    return is_password_hash(user.password_hash)

@@ -15,6 +15,21 @@ def test_password_hashing_is_salted_and_verifiable():
     assert not verify_password("secret123", "garbage")
 
 
+def test_older_scrypt_passwords_still_work_and_are_upgraded_on_sign_in(client, db_session):
+    from app.core.security import _hash_scrypt
+
+    register(client)
+    client.post("/api/auth/logout")
+    user = db_session.scalar(select(User))
+    user.password_hash = _hash_scrypt("secret123")  # an account created before Argon2id
+    db_session.commit()
+    assert client.post("/api/auth/login", json={"email": "ayesha@example.com", "password": "secret123"}).status_code == 200
+    db_session.expire_all()
+    assert db_session.scalar(select(User.password_hash)).startswith("$argon2id$")
+    client.post("/api/auth/logout")
+    assert client.post("/api/auth/login", json={"email": "ayesha@example.com", "password": "secret123"}).status_code == 200
+
+
 def test_register_sets_httponly_session_and_never_stores_plaintext(client, db_session):
     user = register(client)
     assert user["email"] == "ayesha@example.com"
@@ -24,7 +39,7 @@ def test_register_sets_httponly_session_and_never_stores_plaintext(client, db_se
     assert any(c.name == get_settings().session_cookie_name for c in cookie_header)
 
     stored = db_session.scalar(select(User))
-    assert stored.password_hash.startswith("scrypt$")
+    assert stored.password_hash.startswith("$argon2id$")
     assert "secret123" not in stored.password_hash
     # Only a hash of the session token is stored.
     token = client.cookies.get(get_settings().session_cookie_name)

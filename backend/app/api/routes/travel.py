@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from app.api.deps import require_csrf_header
 from app.core.config import get_settings
 from app.core.rate_limit import limit_search, limiter
 from app.data.travel_content import CATEGORIES
@@ -146,7 +147,7 @@ class PlanRequest(BaseModel):
     budget: Literal["budget", "mid", "luxury"] = "mid"
 
 
-@router.post("/planner/plan", summary="Day-by-day trip plan with weather and a budget estimate", dependencies=[Depends(_limit)])
+@router.post("/planner/plan", summary="Day-by-day trip plan with weather and a budget estimate", dependencies=[Depends(require_csrf_header), Depends(_limit)])
 def plan(body: PlanRequest) -> dict:
     _range(body.start, body.end, 21, "trip")
     city = _city(body.location)

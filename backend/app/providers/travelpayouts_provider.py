@@ -162,11 +162,14 @@ class TravelpayoutsFlightProvider:
                     duration_minutes=back_minutes or None, stops=int(fare.get("return_transfers") or 0)))
             except (TypeError, ValueError):
                 pass
+        # Only a path on the booking site is accepted: "//evil.example" or "@evil.example" would
+        # otherwise turn the link into a redirect to another host.
         link = fare.get("link") or ""
-        booking_url = f"{BOOKING_HOST}{link}" + (f"&marker={self.marker}" if self.marker and link else "") if link else None
+        safe_link = link.startswith("/") and not link.startswith("//") and "\\" not in link and "@" not in link.split("?", 1)[0]
+        booking_url = (f"{BOOKING_HOST}{link}" + (f"&marker={self.marker}" if self.marker else "")) if safe_link else None
         estimated = travellers > 1
         return FlightOffer(
-            id="tp_" + hashlib.sha1(f"{link}|{price}|{fare.get('departure_at')}".encode()).hexdigest()[:24],
+            id="tp_" + hashlib.sha256(f"{link}|{price}|{fare.get('departure_at')}".encode()).hexdigest()[:24],
             provider=self.name,
             data_status="recent",
             retrieved_at=retrieved,

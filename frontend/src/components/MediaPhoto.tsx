@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Camera } from 'lucide-react';
 import { api } from '../lib/api';
+import { safeUrl } from '../lib/safeUrl';
 
 type Photo = {
   available: boolean; pending?: boolean; illustrative?: boolean; url?: string; url_2x?: string | null;
@@ -54,7 +55,7 @@ export function MediaPhoto({ kind = 'article', q, seed = '', context = '', icon,
       {photo === null && <span className="photo-shimmer" aria-hidden="true" />}
       {label && <span className="media-label">{label}</span>}
       {show && loaded && (
-        <a className="media-credit" href={photo.file_url ?? undefined} target="_blank" rel="noreferrer noopener" onClick={(e) => e.stopPropagation()}
+        <a className="media-credit" href={safeUrl(photo.file_url)} target="_blank" rel="noreferrer noopener" onClick={(e) => e.stopPropagation()}
           title={`${photo.illustrative ? 'Illustrative photo. ' : ''}Photo: ${photo.artist} · ${photo.licence} · via ${photo.source}`}>
           <Camera size={10} aria-hidden="true" />{photo.illustrative ? 'Illustrative · ' : ''}{photo.artist?.slice(0, 22)} · {photo.licence}
         </a>

@@ -10,6 +10,9 @@ REPO_ROOT = BACKEND_DIR.parent
 
 ENV_FILES = (REPO_ROOT / ".env", BACKEND_DIR / ".env")
 
+# Placeholder used only in development; the API refuses to start elsewhere while it is set.
+DEV_SECRET_KEY = "dev-only-insecure-secret-change-me"  # nosec B105 - not a real secret, rejected in production
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -60,7 +63,12 @@ class Settings(BaseSettings):
 
     # Keys the hashes of emailed sign-in codes. Must be a long random value in production
     # (the API refuses to start with this default outside development).
-    secret_key: str = "dev-only-insecure-secret-change-me"
+    secret_key: str = DEV_SECRET_KEY
+    # Largest request body accepted (bytes); the biggest legitimate one is a saved flight offer.
+    max_request_bytes: int = 512 * 1024
+    # Ceiling on flight searches per minute across all visitors: a cost and quota backstop
+    # on top of the per-visitor limit, in case client addresses are spoofed or rotated.
+    rate_limit_search_global_per_minute: int = 120
 
     # Email delivery (sign-in codes, price alerts). "smtp" (e.g. Gmail with an App Password)
     # or "brevo" (HTTPS API: works on free hosts that block SMTP ports; needs BREVO_API_KEY

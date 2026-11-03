@@ -11,6 +11,7 @@ import { useFeatures } from '../lib/features';
 import { navigate } from '../lib/router';
 import type { Guide, GuideCard } from '../lib/travel';
 import type { AirportRef } from '../lib/types';
+import { safeUrl } from '../lib/safeUrl';
 
 export function GuidesPage({ location, origin, onSearchRoute }: { location?: string; origin: AirportRef | null; onSearchRoute: SearchRouteFn }) {
   return location ? <GuideDetail location={location} origin={origin} onSearchRoute={onSearchRoute} /> : <GuideList />;
@@ -92,7 +93,7 @@ function GuideDetail({ location, origin, onSearchRoute }: { location: string; or
             <section className="card panel">
               <h2>Overview</h2>
               <p>{g.overview.extract}</p>
-              {g.overview.url && <a className="link-btn small" href={g.overview.url} target="_blank" rel="noreferrer noopener">Read more on Wikipedia <ExternalLink size={12} /></a>}
+              {g.overview.url && <a className="link-btn small" href={safeUrl(g.overview.url)} target="_blank" rel="noreferrer noopener">Read more on Wikipedia <ExternalLink size={12} /></a>}
               <small className="muted block">Summary: {g.overview.source}</small>
             </section>
           )}

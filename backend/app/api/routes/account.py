@@ -27,6 +27,7 @@ router = APIRouter(prefix="/api/account", tags=["account"], dependencies=[Depend
 MAX_SAVED_FLIGHTS = 200
 MAX_RECENTLY_VIEWED = 20
 MAX_SAVED_ROUTES = 100
+MAX_FAVOURITES = 200
 
 
 @router.get("/profile", response_model=UserOut)
@@ -196,6 +197,8 @@ def list_favourites(user: User = Depends(get_current_user), db: Session = Depend
 def add_favourite(body: FavouriteRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[str]:
     exists = db.scalar(select(FavouriteDestination.id).where(FavouriteDestination.user_id == user.id, FavouriteDestination.airport_code == body.airport_code))
     if exists is None:
+        if db.scalar(select(func.count()).select_from(FavouriteDestination).where(FavouriteDestination.user_id == user.id)) >= MAX_FAVOURITES:
+            raise HTTPException(status_code=409, detail=f"You can keep up to {MAX_FAVOURITES} favourite destinations. Remove one first.")
         db.add(FavouriteDestination(user_id=user.id, airport_code=body.airport_code))
         db.commit()
     return list_favourites(user, db)

@@ -1,8 +1,9 @@
 from fastapi.testclient import TestClient
 from app.main import app
-from tests.conftest import future
+from tests.conftest import CSRF, future
 
-client = TestClient(app)
+# Like the website, send the request-verification header that state-changing routes require.
+client = TestClient(app, headers=CSRF)
 
 
 def test_demo_search_returns_explicitly_labeled_offers():

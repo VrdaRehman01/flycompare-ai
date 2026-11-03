@@ -5,7 +5,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.security import hash_password, hash_session_token, new_session_token, verify_password
+from app.core.security import hash_password, hash_session_token, is_password_hash, needs_rehash, new_session_token, verify_password
 from app.models import (
     EmailCode,
     FareObservation,
@@ -33,7 +33,7 @@ def user_out(user: User) -> UserOut:
         preferences=Preferences(**(user.preferences or {})),
         created_at=user.created_at,
         email_verified=user.email_verified_at is not None,
-        has_password=user.password_hash.startswith("scrypt$"),
+        has_password=is_password_hash(user.password_hash),
     )
 
 
@@ -55,6 +55,10 @@ def authenticate(db: Session, email: str, password: str) -> User:
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
     if not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
+    # Upgrade older (scrypt) or weaker hashes now that the plain password is known to be right.
+    if needs_rehash(user.password_hash):
+        user.password_hash = hash_password(password)
+        db.commit()
     return user
 
 

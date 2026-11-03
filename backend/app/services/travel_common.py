@@ -82,7 +82,7 @@ def cost_index(city: City) -> float:
 def seeded(*parts: object) -> random.Random:
     """A deterministic RNG so the same demo search always returns the same options."""
     digest = sha256("|".join(str(p) for p in parts).encode()).hexdigest()
-    return random.Random(int(digest[:16], 16))
+    return random.Random(int(digest[:16], 16))  # nosec B311 - varies demo data only; security code uses `secrets`
 
 
 def city_summary(city: City) -> dict:

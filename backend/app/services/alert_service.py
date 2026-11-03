@@ -9,6 +9,7 @@ off. Provider or email failures are recorded on the alert and retried next round
 they never produce a notification.
 """
 
+import html
 import logging
 import threading
 from datetime import date, datetime, timedelta, timezone
@@ -94,6 +95,10 @@ def delete_alert(db: Session, user: User, alert_id: int) -> None:
 
 def _email(user: User, alert: PriceAlert, price: float, booking_url: str | None) -> None:
     settings = get_settings()
+    # Provider data is untrusted: only an http(s) link goes into the email, escaped for HTML.
+    if booking_url and not booking_url.startswith(("https://", "http://")):
+        booking_url = None
+    booking_href = html.escape(booking_url, quote=True) if booking_url else None
     trip = f"{alert.origin_code} → {alert.destination_code}"
     dates = alert.departure_date.strftime("%d %b %Y") + (f" – {alert.return_date.strftime('%d %b %Y')}" if alert.return_date else " (one way)")
     manage = settings.app_public_url.rstrip("/") + "/#/account/alerts"
@@ -103,17 +108,17 @@ def _email(user: User, alert: PriceAlert, price: float, booking_url: str | None)
             + (f"Check the price and book: {booking_url}\n\n" if booking_url else "")
             + "Fares change quickly and this one may not last. It is a recent fare, so confirm the final price on the booking site.\n\n"
             f"Manage your alerts: {manage}")
-    html = (
+    body_html = (
         "<div style=\"font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#172844\">"
         "<h2 style=\"margin:0 0 12px;font-size:20px\">FlyCompare <span style=\"color:#1a6dff\">AI</span></h2>"
         f"<p style=\"font-size:15px\">The lowest fare for <b>{trip}</b>, {dates}, dropped to</p>"
         f"<p style=\"font-size:30px;font-weight:700;margin:8px 0\">{amount}</p>"
         f"<p style=\"font-size:14px;color:#64748b;margin-top:0\">Your target: {target}</p>"
-        + (f"<p><a href=\"{booking_url}\" style=\"display:inline-block;background:#1a6dff;color:#fff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700\">Check price &amp; book</a></p>" if booking_url else "")
+        + (f"<p><a href=\"{booking_href}\" style=\"display:inline-block;background:#1a6dff;color:#fff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700\">Check price &amp; book</a></p>" if booking_url else "")
         + "<p style=\"font-size:13px;color:#64748b\">Fares change quickly. This is a recent fare: confirm the final price on the booking site.</p>"
-        f"<p style=\"font-size:13px\"><a href=\"{manage}\">Manage your alerts</a></p></div>"
+        f"<p style=\"font-size:13px\"><a href=\"{html.escape(manage, quote=True)}\">Manage your alerts</a></p></div>"
     )
-    email_service.send(user.email, subject, text, html)
+    email_service.send(user.email, subject, text, body_html)
 
 
 def check_alert(db: Session, alert: PriceAlert, provider) -> str:
