@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowRight, Bookmark, Clock3, Eye, Heart, History, KeyRound, LogIn, Search, Settings, Trash2, User as UserIcon } from 'lucide-react';
+import { ArrowRight, BellRing, Bookmark, Clock3, Eye, Heart, History, KeyRound, LogIn, Search, Settings, Trash2, User as UserIcon } from 'lucide-react';
 import type { SearchRouteFn } from '../App';
 import { DISPLAY_CURRENCIES } from '../components/Header';
 import { AirportField } from '../components/AirportField';
@@ -8,9 +8,9 @@ import { ConfirmDialog, EmptyState, Loading, Modal, Notice, Price, StatusPill } 
 import { AirlineLogo } from '../illustrations';
 import { DestinationPhoto } from '../components/DestinationCard';
 import { api, errorText } from '../lib/api';
-import { cityOf, dateTime, dayMonth, durationLabel, legsOf, stopsLabel, toRef, todayIso } from '../lib/format';
+import { cityOf, dateTime, dayMonth, durationLabel, legsOf, money, relativeTime, stopsLabel, toRef, todayIso } from '../lib/format';
 import { navigate, type AccountTab } from '../lib/router';
-import { CABINS, type Airport, type AirportRef, type Flight, type HistoryItem, type Preferences, type SavedFlight, type SearchForm, type ThemePreference, type User } from '../lib/types';
+import { CABINS, type Airport, type AirportRef, type Flight, type HistoryItem, type Preferences, type PriceAlert, type SavedFlight, type SearchForm, type ThemePreference, type User } from '../lib/types';
 import { useAuth, usePrefs, useToast } from '../state';
 
 const TABS: { id: AccountTab; label: string; icon: ReactNode }[] = [
@@ -19,6 +19,7 @@ const TABS: { id: AccountTab; label: string; icon: ReactNode }[] = [
   { id: 'favourites', label: 'Favourites', icon: <Heart size={16} /> },
   { id: 'recent', label: 'Recently viewed', icon: <Eye size={16} /> },
   { id: 'history', label: 'Search history', icon: <History size={16} /> },
+  { id: 'alerts', label: 'Price alerts', icon: <BellRing size={16} /> },
   { id: 'preferences', label: 'Preferences', icon: <Settings size={16} /> },
   { id: 'security', label: 'Security', icon: <KeyRound size={16} /> },
 ];
@@ -60,6 +61,7 @@ export function AccountPage({ tab, onOpenFlight, onSearchRoute, onExplore }: Pro
           {tab === 'favourites' && <FavouritesTab onExplore={onExplore} />}
           {tab === 'recent' && <RecentTab onOpenFlight={onOpenFlight} />}
           {tab === 'history' && <HistoryTab onSearchRoute={onSearchRoute} />}
+          {tab === 'alerts' && <AlertsTab onSearchRoute={onSearchRoute} />}
           {tab === 'preferences' && <PreferencesTab user={user} />}
           {tab === 'security' && <SecurityTab />}
         </div>
@@ -188,6 +190,49 @@ function RecentTab({ onOpenFlight }: { onOpenFlight: Props['onOpenFlight'] }) {
         <div className="saved-list">{items.map((s) => <FlightRow key={s.id} item={s} onOpen={() => onOpenFlight(s.offer, s.search)} />)}</div>
       ) : <EmptyState icon={<Eye size={28} />} title="Nothing viewed yet">Flights you open from search results will appear here.</EmptyState>}
       {confirm && <ConfirmDialog title="Clear recently viewed?" body={<p>This removes your recently viewed flight list. Saved flights are not affected.</p>} confirmLabel="Clear list" danger onCancel={() => setConfirm(false)} onConfirm={() => void clear()} />}
+    </Section>
+  );
+}
+
+function AlertsTab({ onSearchRoute }: { onSearchRoute: SearchRouteFn }) {
+  const toast = useToast();
+  const [items, setItems] = useState<PriceAlert[] | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => { api<PriceAlert[]>('/api/account/alerts').then(setItems).catch((err) => setError(errorText(err))); }, []);
+  const remove = async (a: PriceAlert) => {
+    try { await api(`/api/account/alerts/${a.id}`, { method: 'DELETE' }); setItems((all) => (all ?? []).filter((x) => x.id !== a.id)); toast('info', 'Alert removed.'); }
+    catch (err) { toast('error', errorText(err)); }
+  };
+  return (
+    <Section title="Price alerts" sub="We re-check each trip every few hours and email you when the lowest fare reaches your target. Create one from any search result.">
+      {error ? <Notice kind="error">{error}</Notice> : !items ? <Loading /> : items.length ? (
+        <div className="alert-list">
+          {items.map((a) => {
+            const reached = a.last_price != null && a.last_price <= a.target_price;
+            return (
+              <article key={a.id} className={`alert-item ${a.active ? '' : 'inactive'}`}>
+                <span className={`alert-icon ${reached ? 'reached' : ''}`}><BellRing size={16} /></span>
+                <div className="alert-main">
+                  <b>{a.origin} <ArrowRight size={12} /> {a.destination}</b>
+                  <small className="muted">{dayMonth(a.departure_date)}{a.return_date ? ` – ${dayMonth(a.return_date)}` : ' · one way'} · 1 adult, economy</small>
+                  <small className={a.last_error ? 'alert-error' : 'muted'}>
+                    {!a.active ? 'Finished: the departure date has passed.'
+                      : a.last_error ? a.last_error
+                      : a.last_checked_at ? <>Checked {relativeTime(a.last_checked_at)}: {a.last_price != null ? <>lowest <b>{money(a.last_price, a.currency)}</b></> : 'no fares found yet'}</>
+                      : 'Waiting for the first check (within the hour).'}
+                    {a.notified_at && ` · Emailed ${relativeTime(a.notified_at)} at ${money(a.notified_price!, a.currency)}`}
+                  </small>
+                </div>
+                <div className="alert-target"><small>Target</small><strong>{money(a.target_price, a.currency)}</strong></div>
+                <div className="alert-actions">
+                  {a.active && <button className="link-btn small" onClick={() => onSearchRoute(a.origin, a.destination, { departure: a.departure_date, returnDate: a.return_date, tripType: a.return_date ? 'round-trip' : 'one-way' })}><Search size={12} /> Search now</button>}
+                  <button className="icon-btn small" onClick={() => void remove(a)} aria-label={`Remove alert ${a.origin} to ${a.destination}`}><Trash2 size={14} /></button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : <EmptyState icon={<BellRing size={28} />} title="No price alerts yet">Search a trip, then choose “Price alert” above the results to be emailed when it gets cheaper.</EmptyState>}
     </Section>
   );
 }

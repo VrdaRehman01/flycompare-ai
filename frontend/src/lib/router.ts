@@ -12,8 +12,8 @@ export type Route =
   | { page: 'stays'; location?: string } | { page: 'packages'; location?: string }
   | { page: 'cars'; tab: GroundTab; location?: string } | { page: 'tours'; kind: TourKind; location?: string }
   | { page: 'planner'; location?: string } | { page: 'guides'; location?: string };
-export type AccountTab = 'profile' | 'saved' | 'favourites' | 'recent' | 'history' | 'preferences' | 'security';
-const ACCOUNT_TABS: AccountTab[] = ['profile', 'saved', 'favourites', 'recent', 'history', 'preferences', 'security'];
+export type AccountTab = 'profile' | 'saved' | 'favourites' | 'recent' | 'history' | 'alerts' | 'preferences' | 'security';
+const ACCOUNT_TABS: AccountTab[] = ['profile', 'saved', 'favourites', 'recent', 'history', 'alerts', 'preferences', 'security'];
 
 export function parseHash(hash: string): Route {
   const [page, sub, extra] = hash.replace(/^#\/?/, '').split('/');

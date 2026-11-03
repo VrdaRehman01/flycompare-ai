@@ -66,6 +66,11 @@ export type HistoryItem = {
 
 export type Preferences = { home_airport?: string | null; cabin?: Cabin | null; passengers?: number | null; currency?: string | null; theme?: ThemePreference | null };
 export type User = { id: number; name: string; email: string; preferences: Preferences; created_at: string; email_verified?: boolean; has_password?: boolean };
+export type PriceAlert = {
+  id: number; origin: string; destination: string; departure_date: string; return_date: string | null;
+  target_price: number; currency: string; active: boolean; created_at: string;
+  last_checked_at: string | null; last_price: number | null; last_error: string | null; notified_at: string | null; notified_price: number | null;
+};
 /** Returned instead of a user when an emailed code must be entered first. */
 export type CodePending = { verification_required: true; email: string; expires_in_seconds: number; resend_after_seconds: number };
 export type SavedFlight = { id: number; offer_id: string; offer: Flight; search: SearchForm | null; saved_at: string };

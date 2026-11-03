@@ -1,18 +1,64 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowRight, Check, ChevronDown, Filter, Info, LineChart as LineIcon, Map as MapIcon, Plane, Search, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { ArrowRight, BellRing, Check, ChevronDown, Filter, Info, LineChart as LineIcon, Map as MapIcon, Plane, Search, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { FlightCard } from '../components/FlightCard';
-import { Notice, Price, StatusPill } from '../components/ui';
+import { Modal, Notice, Price, StatusPill } from '../components/ui';
 import { PriceTrendChart } from '../components/charts';
 import { LazyWorldMap } from '../components/LazyMap';
-import { api } from '../lib/api';
+import { api, errorText } from '../lib/api';
 import { dateTime, dayMonth, durationLabel, knownAirport, legsOf, money, rememberAirports, toRef } from '../lib/format';
 import { passengerSummary, travellerCount } from '../lib/validation';
 import { activeFilterCount, applyFilters, emptyFilters, facets, SCORE_WEIGHTS, scoreResults, sortResults, TIME_WINDOWS, totalDurationOf, type Filters, type Sort, type StopKey } from '../lib/results';
 import { AirlineLogo } from '../illustrations';
 import type { Airport, AirportRef, FareEstimate, Flight, PriceHistory, SearchState } from '../lib/types';
-import { useAuth } from '../state';
+import { useAuth, useToast } from '../state';
 
 const PAGE_SIZE = 20;
+
+/** "Email me when this trip gets cheaper": creates or updates a price alert for the searched dates. */
+function PriceAlertButton({ from, to, departure, returnDate, lowest, currency }: {
+  from: string; to: string; departure: string; returnDate: string | null; lowest: number | null; currency: string;
+}) {
+  const { user, openAuth } = useAuth();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [target, setTarget] = useState(() => (lowest ? String(Math.floor(lowest * 0.9)) : ''));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const start = () => {
+    if (!user) { openAuth('login', 'Sign in to get price alerts by email.', () => setOpen(true)); return; }
+    setOpen(true);
+  };
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    const value = Number(target);
+    if (!(value > 0)) { setError('Enter a target price above zero.'); return; }
+    setBusy(true); setError('');
+    try {
+      await api('/api/account/alerts', { method: 'POST', body: { origin: from, destination: to, departure_date: departure, return_date: returnDate, target_price: value, currency } });
+      setOpen(false);
+      toast('success', `Alert set: we'll email you when ${from} → ${to} drops to ${money(value, currency)} or less.`);
+    } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
+  };
+  return (
+    <>
+      <button className="btn btn-ghost" onClick={start}><BellRing size={15} /> Price alert</button>
+      {open && (
+        <Modal title="Get a price alert" onClose={() => setOpen(false)}>
+          <form className="form" onSubmit={save} noValidate>
+            <p className="muted small">We'll check {from} → {to}, {dayMonth(departure)}{returnDate ? ` – ${dayMonth(returnDate)}` : ' (one way)'}, every few hours and email {user?.email} when the lowest fare for one adult in economy reaches your target.</p>
+            <label className="form-field"><span>Email me when it costs at most ({currency})</span>
+              <input type="number" inputMode="decimal" min={1} step="1" value={target} onChange={(e) => setTarget(e.target.value)} autoFocus />
+              {lowest != null && <small>Lowest fare right now: {money(lowest, currency)}</small>}
+            </label>
+            {error && <Notice kind="error">{error}</Notice>}
+            <button className="btn btn-primary full" disabled={busy}>{busy && <span className="spinner" />}Create alert</button>
+            <p className="modal-fine">Manage alerts any time under Account → Price alerts.</p>
+          </form>
+        </Modal>
+      )}
+    </>
+  );
+}
 
 export function ResultsPage({ search, onEdit, onSelect }: { search: SearchState; onEdit: () => void; onSelect: (f: Flight) => void }) {
   const { query, response } = search;
@@ -59,6 +105,8 @@ export function ResultsPage({ search, onEdit, onSelect }: { search: SearchState;
         <span className="summary-sep" />
         <span>{passengerSummary(query.passengers)} · {query.cabin}</span>
         <StatusPill status={response.data_status} />
+        {!multi && <PriceAlertButton from={from} to={to} departure={query.departure} returnDate={query.tripType === 'round-trip' ? query.returnDate : null}
+          lowest={ranked.cheapest[0]?.price ?? null} currency={currency ?? 'USD'} />}
         <button className="btn btn-soft" onClick={onEdit}>Modify search</button>
       </div>
       <Notice kind={response.data_status === 'live' || response.data_status === 'recent' ? 'info' : 'warn'}>{response.source_message} <span className="muted">Searched {dateTime(search.searchedAt)}.</span></Notice>

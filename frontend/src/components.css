@@ -278,3 +278,22 @@ a.brand { text-decoration: none; }
 .auth-sent { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--blue-soft); color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
 .auth-sent svg { flex: none; margin-top: 2px; color: var(--blue); }
 .form-field input.code-input { height: 56px; font-size: 26px; font-weight: 800; letter-spacing: .45em; text-align: center; font-variant-numeric: tabular-nums; }
+/* Price alerts (Account → Price alerts) */
+.alert-list { display: flex; flex-direction: column; gap: 10px; }
+.alert-item { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto auto; gap: 14px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+.alert-item.inactive { opacity: .6; }
+.alert-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--blue-soft); color: var(--blue); }
+.alert-icon.reached { background: var(--green-soft); color: var(--green); }
+.alert-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.alert-main b { display: inline-flex; align-items: center; gap: 5px; font-size: 14.5px; }
+.alert-main small { font-size: 12.5px; }
+.alert-error { color: var(--amber); }
+.alert-target { display: flex; flex-direction: column; align-items: flex-end; }
+.alert-target small { font-size: 11px; color: var(--muted); }
+.alert-target strong { font-size: 16px; }
+.alert-actions { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 640px) {
+  .alert-item { grid-template-columns: 36px minmax(0, 1fr); }
+  .alert-target { align-items: flex-start; }
+  .alert-target, .alert-actions { grid-column: 2; }
+}

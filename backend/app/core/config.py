@@ -78,6 +78,19 @@ class Settings(BaseSettings):
     login_code_resend_seconds: int = 60
     login_codes_per_hour: int = 5
 
+    # Public address of the website, used for links in emails.
+    app_public_url: str = "http://localhost:5173"
+
+    # Price alerts: re-check each active alert at most every ALERT_RECHECK_HOURS. The
+    # in-process checker runs every ALERTS_CHECK_INTERVAL_MINUTES (0 disables it). Hosts
+    # that sleep when idle can instead call POST /api/internal/alerts/run with
+    # "Authorization: Bearer ALERTS_CRON_TOKEN" from a scheduler (empty token = disabled).
+    alerts_enabled: bool = True
+    alerts_check_interval_minutes: int = 60
+    alert_recheck_hours: int = 6
+    alerts_per_user: int = 10
+    alerts_cron_token: str = ""
+
     # Browser sessions are opaque random tokens stored hashed in the database
     # and sent to the browser only as an HttpOnly cookie.
     session_cookie_name: str = "fc_session"

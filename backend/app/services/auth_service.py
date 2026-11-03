@@ -9,6 +9,7 @@ from app.core.security import hash_password, hash_session_token, new_session_tok
 from app.models import (
     EmailCode,
     FareObservation,
+    PriceAlert,
     SavedRoute,
     FavouriteDestination,
     FlightSearchHistory,
@@ -103,7 +104,7 @@ def delete_account(db: Session, user: User) -> None:
     search_ids = select(FlightSearchHistory.id).where(FlightSearchHistory.user_id == user.id)
     db.execute(update(FareObservation).where(FareObservation.search_id.in_(search_ids)).values(search_id=None))
     db.execute(delete(FlightSearchHistory).where(FlightSearchHistory.user_id == user.id))
-    for model in (SavedFlight, RecentlyViewedFlight, FavouriteDestination, SavedRoute, UserSession):
+    for model in (SavedFlight, RecentlyViewedFlight, FavouriteDestination, SavedRoute, PriceAlert, UserSession):
         db.execute(delete(model).where(model.user_id == user.id))
     db.execute(delete(EmailCode).where(EmailCode.email == user.email))
     db.delete(user)

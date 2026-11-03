@@ -166,6 +166,33 @@ class SavedRoute(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
+class PriceAlert(Base):
+    """A signed-in user's request to be emailed when a trip's fare drops to a target price.
+
+    The checker re-searches the trip periodically and stores what it saw, so the user
+    can see when it was last checked and the lowest fare found, not just the outcome.
+    """
+
+    __tablename__ = "price_alerts"
+    __table_args__ = (UniqueConstraint("user_id", "origin_code", "destination_code", "departure_date", "return_date", name="uq_alert_user_trip"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    origin_code: Mapped[str] = mapped_column(String(3), nullable=False)
+    destination_code: Mapped[str] = mapped_column(String(3), nullable=False)
+    departure_date: Mapped[date] = mapped_column(Date, nullable=False)
+    return_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    target_price: Mapped[float] = mapped_column(Float, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    active: Mapped[bool] = mapped_column(default=True, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    last_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    notified_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
 class DestinationImage(Base):
     """Cached destination photo lookup (Wikipedia / Wikimedia Commons) including attribution.
 

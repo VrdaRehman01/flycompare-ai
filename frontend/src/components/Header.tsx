@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { BarChart3, BookOpen, Bookmark, CarFront, Check, ChevronDown, Globe2, Heart, History, KeyRound, LogIn, LogOut, Mail, Menu, Monitor, Moon, Plane, Settings, Sun, User as UserIcon, UserPlus, UserRound, Users, Wand2, X } from 'lucide-react';
+import { BarChart3, BellRing, BookOpen, Bookmark, CarFront, Check, ChevronDown, Globe2, Heart, History, KeyRound, LogIn, LogOut, Mail, Menu, Monitor, Moon, Plane, Settings, Sun, User as UserIcon, UserPlus, UserRound, Users, Wand2, X } from 'lucide-react';
 import { errorText } from '../lib/api';
 import { useFeatures, type DemoService } from '../lib/features';
 import { navigate, type Route } from '../lib/router';
@@ -105,6 +105,7 @@ export function Header({ route }: { route: Route }) {
                   <MenuItem icon={<Bookmark size={15} />} onClick={() => { close(); go({ page: 'account', tab: 'saved' }); }}>Saved flights</MenuItem>
                   <MenuItem icon={<Heart size={15} />} onClick={() => { close(); go({ page: 'account', tab: 'favourites' }); }}>Favourite destinations</MenuItem>
                   <MenuItem icon={<History size={15} />} onClick={() => { close(); go({ page: 'account', tab: 'history' }); }}>Search history</MenuItem>
+                  <MenuItem icon={<BellRing size={15} />} onClick={() => { close(); go({ page: 'account', tab: 'alerts' }); }}>Price alerts</MenuItem>
                   <MenuItem icon={<BarChart3 size={15} />} onClick={() => { close(); go({ page: 'insights' }); }}>My insights</MenuItem>
                   <MenuItem icon={<Settings size={15} />} onClick={() => { close(); go({ page: 'account', tab: 'preferences' }); }}>Preferences</MenuItem>
                   <div className="menu-sep" />
