@@ -82,7 +82,7 @@ export function FlightCard({ f, passengers, badge, score, saved, onSave, onSelec
           <button className={`heart ${saved ? 'on' : ''}`} onClick={onSave} aria-pressed={saved} aria-label={saved ? 'Remove from saved flights' : 'Save flight'}><Heart size={16} /></button>
           {badge && <span className={`badge ${badge === 'Cheapest' ? 'green' : 'blue'}`}>{badge}</span>}
           <Price amount={f.price} currency={f.currency} />
-          <small>{f.price_is_estimate ? 'Est. total' : 'Total'} · {legs.length > 2 ? 'multi-city' : legs.length > 1 ? 'round trip' : 'one way'}{passengers > 1 ? ` · ${passengers} travellers` : ''}{f.sold_by ? ` · via ${f.sold_by}` : ''}</small>
+          <small>{f.price_is_estimate ? 'Est. total' : 'Total'} · {legs.length > 2 ? 'multi-city' : legs.length > 1 ? (f.return_booking_url ? 'round trip, 2 tickets' : 'round trip') : 'one way'}{passengers > 1 ? ` · ${passengers} travellers` : ''}{f.sold_by ? ` · via ${f.sold_by}` : ''}</small>
           <button className="btn btn-primary" onClick={onSelect}>Select</button>
         </div>
       </div>

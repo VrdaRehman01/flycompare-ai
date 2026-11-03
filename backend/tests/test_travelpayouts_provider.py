@@ -89,13 +89,51 @@ def test_unsupported_searches_are_explained(provider):
     multi = FlightSearchRequest(origin="LHE", destination="IST", departure_date=DEP, trip_type="multi-city", legs=legs)
     with pytest.raises(tp.TravelpayoutsError, match="Multi-city"):
         provider.search(multi)
-    # The source rejects round trips longer than 30 days (HTTP 400): explained, never sent.
-    long_trip = FlightSearchRequest(origin="LHE", destination="DXB", departure_date=DEP, return_date=DEP + timedelta(days=31), trip_type="round-trip")
-    with pytest.raises(tp.TravelpayoutsError, match="up to 30 days"):
-        provider.search(long_trip)
-    assert provider.nearby_dates(long_trip) == [] and not provider.calls
-    month = FlightSearchRequest(origin="LHE", destination="DXB", departure_date=DEP, return_date=DEP + timedelta(days=30), trip_type="round-trip")
-    provider.search(month)
+
+
+
+def test_trips_longer_than_the_source_allows_pair_two_one_way_fares(provider, monkeypatch):
+    back_day = DEP + timedelta(days=45)
+    outbound = [{**FARES[0], "return_at": None, "price": 200, "link": "/search/out?t=1"},
+                {**FARES[2], "return_at": None, "price": 150, "link": "/search/out?t=2"}]
+    inbound = [{"origin_airport": "DXB", "destination_airport": "LHE", "departure_at": f"{back_day}T10:00:00+04:00", "airline": "EK",
+                "flight_number": "622", "price": 180, "gate": "Emirates", "transfers": 0, "duration_to": 180, "link": "/search/back?t=3"}]
+
+    def by_direction(self, url, params=None):
+        if url == tp.AIRLINES_URL:
+            return []
+        # The source rejects round trips over 30 days, so only one-way queries may be sent.
+        assert params["one_way"] == "true" and "return_at" not in params
+        return {"success": True, "data": outbound if params["origin"] == "LHE" else inbound}
+
+    monkeypatch.setattr(tp.TravelpayoutsFlightProvider, "_get", by_direction)
+    long_trip = FlightSearchRequest(origin="LHE", destination="DXB", departure_date=DEP, return_date=back_day, trip_type="round-trip")
+    offers = provider.search(long_trip)
+    assert [o.price for o in offers] == [330, 380]
+    cheapest = offers[0]
+    assert [(i.origin, i.destination) for i in cheapest.itineraries] == [("LHE", "SHJ"), ("DXB", "LHE")]
+    assert cheapest.booking_url.startswith("https://www.aviasales.com/search/out?t=2")
+    assert cheapest.return_booking_url.startswith("https://www.aviasales.com/search/back?t=3")
+    assert "Two separate one-way tickets" in cheapest.disclaimer and "up to 30 days" in cheapest.disclaimer
+    assert cheapest.sold_by == "City.Travel + Emirates"
+    # Nearby dates for long trips come from one-way fares each way (cheapest per day, summed).
+    assert provider.nearby_dates(long_trip) == [{"departure_date": DEP.isoformat(), "return_date": back_day.isoformat(), "price": 330, "currency": "USD"}]
+
+
+def test_round_trips_without_a_round_trip_fare_fall_back_to_two_one_ways(provider, monkeypatch):
+    def one_ways_only(self, url, params=None):
+        if url == tp.AIRLINES_URL:
+            return []
+        if params["one_way"] == "false":
+            return {"success": True, "data": []}
+        fare = FARES[0] if params["origin"] == "LHE" else {**FARES[0], "origin_airport": "DXB", "destination_airport": "LHE",
+                                                           "departure_at": f"{RET}T10:00:00+04:00", "link": "/search/back?t=1"}
+        return {"success": True, "data": [{**fare, "return_at": None}]}
+
+    monkeypatch.setattr(tp.TravelpayoutsFlightProvider, "_get", one_ways_only)
+    offers = provider.search(_round_trip())
+    assert len(offers) == 1 and offers[0].price == 850 and offers[0].return_booking_url
+    assert "no round-trip fare was found" in offers[0].disclaimer
 
 
 def test_search_route_stores_recent_observations_and_reports_errors(client, db_session, provider, monkeypatch):
@@ -115,7 +153,11 @@ def test_search_route_stores_recent_observations_and_reports_errors(client, db_s
     assert failed.status_code == 502 and "rejected the API token" in failed.json()["detail"]
 
 
-def test_nearby_dates_offer_the_cheapest_fare_per_date_pair_nearest_first(provider):
+def test_nearby_dates_offer_the_cheapest_fare_per_date_pair_nearest_first(provider, monkeypatch):
+    original = tp.TravelpayoutsFlightProvider._get
+    # Round-trip fares only here; pairing one-way fares is covered separately.
+    monkeypatch.setattr(tp.TravelpayoutsFlightProvider, "_get",
+                        lambda self, url, params=None: {"data": []} if params and params["one_way"] == "true" else original(self, url, params))
     near = {**FARES[0], "departure_at": f"{DEP + timedelta(days=1)}T08:00:00+05:00", "return_at": f"{RET}T08:00:00+04:00", "price": 300}
     far = {**FARES[0], "departure_at": f"{DEP + timedelta(days=9)}T08:00:00+05:00", "return_at": f"{RET + timedelta(days=9)}T08:00:00+04:00", "price": 99}
     past = {**FARES[0], "departure_at": "2020-01-01T08:00:00+05:00", "return_at": "2020-01-05T08:00:00+04:00", "price": 1}

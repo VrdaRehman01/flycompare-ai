@@ -9,7 +9,7 @@ import { dateTime, dayMonth, durationLabel, knownAirport, legsOf, money, remembe
 import { passengerSummary, travellerCount } from '../lib/validation';
 import { activeFilterCount, applyFilters, emptyFilters, facets, SCORE_WEIGHTS, scoreResults, sortResults, TIME_WINDOWS, totalDurationOf, type Filters, type Sort, type StopKey } from '../lib/results';
 import { AirlineLogo } from '../illustrations';
-import type { Airport, AirportRef, FareEstimate, Flight, NearbyDate, PriceHistory, SearchState } from '../lib/types';
+import type { Airport, AirportRef, FareEstimate, Flight, NearbyDate, PriceHistory, SearchForm, SearchState } from '../lib/types';
 import { useAuth, useToast } from '../state';
 
 const PAGE_SIZE = 20;
@@ -61,7 +61,7 @@ function PriceAlertButton({ from, to, departure, returnDate, lowest, currency }:
 }
 
 /** Shown instead of a bare "no flights" when the source has real fares on nearby dates. */
-function NearbyDates({ dates, onPick, onEdit }: { dates: NearbyDate[]; onPick: (departure: string, returnDate: string | null) => void; onEdit: () => void }) {
+function NearbyDates({ dates, onPick, onEdit }: { dates: NearbyDate[]; onPick: (patch: Partial<SearchForm>) => void; onEdit: () => void }) {
   return (
     <div className="card empty-state">
       <Plane size={32} />
@@ -69,7 +69,7 @@ function NearbyDates({ dates, onPick, onEdit }: { dates: NearbyDate[]; onPick: (
       <p>The fare source only holds prices travellers found recently. These nearby dates on the same route have real fares:</p>
       <div className="nearby-dates">
         {dates.map((d) => (
-          <button key={`${d.departure_date}-${d.return_date}`} className="nearby-date" onClick={() => onPick(d.departure_date, d.return_date)}>
+          <button key={`${d.departure_date}-${d.return_date}`} className="nearby-date" onClick={() => onPick({ departure: d.departure_date, ...(d.return_date ? { returnDate: d.return_date } : {}) })}>
             <span>{dayMonth(d.departure_date)}{d.return_date ? ` – ${dayMonth(d.return_date)}` : ''}</span>
             <small>from</small>
             <Price amount={d.price} currency={d.currency} inline />
@@ -82,8 +82,8 @@ function NearbyDates({ dates, onPick, onEdit }: { dates: NearbyDate[]; onPick: (
   );
 }
 
-export function ResultsPage({ search, onEdit, onSelect, onSearchDates }: {
-  search: SearchState; onEdit: () => void; onSelect: (f: Flight) => void; onSearchDates: (departure: string, returnDate: string | null) => void;
+export function ResultsPage({ search, onEdit, onSelect, onSearchAgain }: {
+  search: SearchState; onEdit: () => void; onSelect: (f: Flight) => void; onSearchAgain: (patch: Partial<SearchForm>) => void;
 }) {
   const { query, response } = search;
   const results = response.results;
@@ -221,7 +221,17 @@ export function ResultsPage({ search, onEdit, onSelect, onSearchDates }: {
             </div>
           )}
           {results.length === 0 ? (
-            response.nearby_dates?.length ? <NearbyDates dates={response.nearby_dates} onPick={onSearchDates} onEdit={onEdit} /> :
+            response.nearby_dates?.length ? <NearbyDates dates={response.nearby_dates} onPick={onSearchAgain} onEdit={onEdit} /> :
+            response.data_status === 'recent' ? (
+              <div className="card empty-state">
+                <Plane size={32} /><h3>No recent fares for this trip</h3>
+                <p>The fare source only has prices that travellers found recently, mostly for the next few weeks and busier routes.{query.tripType === 'round-trip' ? ` It has none for ${from} → ${to} and back on or near these dates.` : ` It has none for ${from} → ${to} on or near this date.`}</p>
+                <div className="empty-actions">
+                  {query.tripType === 'round-trip' && <button className="btn btn-primary" onClick={() => onSearchAgain({ tripType: 'one-way', returnDate: '' })}>Search one way instead</button>}
+                  <button className="btn btn-soft" onClick={onEdit}>Change dates or airports</button>
+                </div>
+              </div>
+            ) :
             <div className="card empty-state"><Plane size={32} /><h3>No flights found</h3><p>The provider returned no offers for this route and date. Try other dates, a nearby airport, or a different cabin.</p><button className="btn btn-primary" onClick={onEdit}>Modify search</button></div>
           ) : list.length === 0 ? (
             <div className="card empty-state"><Filter size={30} /><h3>No flights match these filters</h3><p>Try widening the price or journey-time limits.</p><button className="btn btn-soft" onClick={reset}><X size={14} /> Clear all filters</button></div>

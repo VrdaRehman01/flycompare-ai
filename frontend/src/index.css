@@ -492,6 +492,8 @@ main { flex: 1; }
 
 .empty-state .btn { margin-top: 8px; }
 
+.empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
 .nearby-dates { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; width: 100%; max-width: 620px; margin-top: 6px; }
 
 .nearby-date { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }

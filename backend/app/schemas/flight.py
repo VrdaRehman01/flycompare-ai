@@ -244,6 +244,8 @@ class FlightOffer(BaseModel):
     supports_extra_services: bool = False
     # Metasearch sources: where to book, which agency sells the fare, and whether the total is an estimate.
     booking_url: str | None = None
+    # Set when outbound and return are two separate one-way tickets, each booked on its own.
+    return_booking_url: str | None = None
     sold_by: str | None = None
     price_is_estimate: bool = False
 

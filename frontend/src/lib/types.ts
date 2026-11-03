@@ -28,7 +28,7 @@ export type Flight = {
   base_amount?: number | null; base_currency?: string | null; tax_amount?: number | null; tax_currency?: string | null;
   expires_at?: string | null; total_emissions_kg?: number | null; passenger_count?: number | null;
   supports_seat_maps?: boolean; supports_extra_services?: boolean;
-  booking_url?: string | null; sold_by?: string | null; price_is_estimate?: boolean;
+  booking_url?: string | null; return_booking_url?: string | null; sold_by?: string | null; price_is_estimate?: boolean;
 };
 export type SeatService = { id: string; passenger_id: string; amount: number | null; currency: string | null };
 export type SeatElement = { type: 'seat'; designator: string; name: string | null; disclosures: string[]; available: boolean; services: SeatService[] } | { type: string };

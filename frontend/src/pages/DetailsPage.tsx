@@ -176,7 +176,17 @@ export function DetailsPage({ flight: f, query, hasResults }: { flight: Flight; 
           </div>
           {f.supports_extra_services && <button className="btn btn-ghost small" onClick={loadOffer} disabled={offer.state === 'loading'}>{offer.state === 'loading' ? <span className="spinner dark" /> : <RefreshCw size={14} />} Re-check price</button>}
           {offer.state === 'error' && <Notice kind="error">{offer.error}</Notice>}
-          {f.booking_url && (
+          {f.booking_url && f.return_booking_url ? (
+            <>
+              <p className="muted small">Two separate one-way tickets: book both flights.</p>
+              <a className="btn btn-primary full" href={safeUrl(f.booking_url)} target="_blank" rel="noreferrer noopener sponsored">
+                <ExternalLink size={15} /> Book outbound flight
+              </a>
+              <a className="btn btn-soft full" href={safeUrl(f.return_booking_url)} target="_blank" rel="noreferrer noopener sponsored">
+                <ExternalLink size={15} /> Book return flight
+              </a>
+            </>
+          ) : f.booking_url && (
             <a className="btn btn-primary full" href={safeUrl(f.booking_url)} target="_blank" rel="noreferrer noopener sponsored">
               <ExternalLink size={15} /> Check price &amp; book{f.sold_by ? ` with ${f.sold_by}` : ''}
             </a>

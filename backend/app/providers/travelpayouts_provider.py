@@ -34,6 +34,7 @@ LOGO_URL = "https://pics.avs.io/120/120/{code}.png"
 BOOKING_HOST = "https://www.aviasales.com"
 CACHE_SECONDS = 15 * 60  # Travelpayouts asks partners to cache Data API answers
 MAX_TRIP_DAYS = 30  # the Data API answers HTTP 400 when the return is later than this
+PAIR_EACH_WAY = 6  # longer trips: the cheapest one-way fares each way that are paired up
 
 _airline_names: dict[str, str] | None = None
 _cache: dict[tuple, tuple[float, list[dict]]] = {}
@@ -135,11 +136,17 @@ class TravelpayoutsFlightProvider:
             raise TravelpayoutsError("Multi-city trips aren't available from the current fare source. Search each flight separately.")
         if request.cabin != "Economy":
             raise TravelpayoutsError("The current fare source has economy fares only. Choose Economy to see prices.")
-        if _too_long(request):
-            raise TravelpayoutsError(f"The current fare source only covers round trips of up to {MAX_TRIP_DAYS} days. "
-                                     "Choose an earlier return date, or search the two flights as separate one-way trips.")
         travellers = request.adults + request.children
         retrieved = datetime.now(timezone.utc)
+        if _too_long(request):
+            return self._two_one_ways(request, travellers, retrieved)
+        offers = self._round_trip_or_one_way(request, travellers, retrieved)
+        # No round-trip fare on these dates: two one-way tickets may still exist.
+        if not offers and request.trip_type == "round-trip" and request.return_date:
+            return self._two_one_ways(request, travellers, retrieved)
+        return offers
+
+    def _round_trip_or_one_way(self, request: FlightSearchRequest, travellers: int, retrieved: datetime) -> list[FlightOffer]:
         # The same itinerary is often reported by several agencies or fare types: keep the cheapest.
         best: dict[tuple, FlightOffer] = {}
         for fare in self._fares(request):
@@ -151,35 +158,103 @@ class TravelpayoutsFlightProvider:
                 best[key] = offer
         return sorted(best.values(), key=lambda o: o.price)
 
+    def _two_one_ways(self, request: FlightSearchRequest, travellers: int, retrieved: datetime) -> list[FlightOffer]:
+        """A round trip priced as two real one-way fares.
+
+        Used when the source has no round-trip fare for the dates, or cannot price the
+        trip at all (longer than 30 days). The cheapest outbound and return fares are
+        paired; each keeps its own booking link, and the offer says plainly that these
+        are two separate tickets.
+        """
+        outbound = request.model_copy(update={"trip_type": "one-way", "return_date": None})
+        inbound = request.model_copy(update={"trip_type": "one-way", "return_date": None, "origin": request.destination,
+                                             "destination": request.origin, "departure_date": request.return_date})
+        outs = self._round_trip_or_one_way(outbound, travellers, retrieved)[:PAIR_EACH_WAY]
+        backs = self._round_trip_or_one_way(inbound, travellers, retrieved)[:PAIR_EACH_WAY] if outs else []
+        why = (f"the fare source only prices round trips of up to {MAX_TRIP_DAYS} days" if _too_long(request)
+               else "no round-trip fare was found for these dates")
+        pairs = []
+        for out in outs:
+            for back in backs:
+                if back.itineraries[0].departing_at <= out.itineraries[0].arriving_at:
+                    continue
+                sellers = " + ".join(dict.fromkeys(s for s in (out.sold_by, back.sold_by) if s)) or None
+                pairs.append(out.model_copy(update={
+                    "id": "tp2_" + hashlib.sha256(f"{out.id}|{back.id}".encode()).hexdigest()[:24],
+                    "itineraries": [*out.itineraries, *back.itineraries],
+                    "price": round(out.price + back.price, 2),
+                    "airline": out.airline if out.airline == back.airline else f"{out.airline} + {back.airline}",
+                    "return_booking_url": back.booking_url,
+                    "sold_by": sellers,
+                    "disclaimer": (
+                        f"Two separate one-way tickets ({why}). "
+                        "Book the outbound and return flights separately; if one is delayed or cancelled, the other airline "
+                        "is not obliged to rebook you. " + out.disclaimer
+                    ),
+                }))
+        return sorted(pairs, key=lambda o: o.price)
+
+    @staticmethod
+    def _month_params(origin: str, destination: str, day) -> dict:
+        return {"origin": origin, "destination": destination, "departure_at": day.strftime("%Y-%m"), "one_way": "true",
+                "currency": "usd", "sorting": "price", "direct": "false", "limit": 100, "page": 1}
+
+    def _cheapest_by_day(self, origin: str, destination: str, day) -> dict:
+        """Cheapest one-way fare for each future day of ``day``'s month."""
+        today = datetime.now(timezone.utc).date()
+        cheapest: dict = {}
+        for fare in self._query(self._month_params(origin, destination, day)):
+            try:
+                when = datetime.fromisoformat(fare["departure_at"]).date()
+                price = float(fare["price"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if when >= today and (when not in cheapest or price < cheapest[when]):
+                cheapest[when] = price
+        return cheapest
+
     def nearby_dates(self, request: FlightSearchRequest, limit: int = 6) -> list[dict]:
         """Closest dates that do have recent fares, for when the exact dates have none.
 
         The source only holds fares that users recently found, so an exact pair of dates
         is often empty while the days around it are not. Querying the whole month(s)
         returns those real fares; the cheapest per date pair is offered, nearest first.
+        Round trips also count days with a one-way fare each way, which the search pairs.
         """
-        if request.trip_type == "multi-city" or request.cabin != "Economy" or _too_long(request):
+        if request.trip_type == "multi-city" or request.cabin != "Economy":
             return []
         round_trip = request.trip_type == "round-trip" and request.return_date is not None
-        params = {
-            "origin": request.origin_code, "destination": request.destination_code,
-            "departure_at": request.departure_date.strftime("%Y-%m"), "one_way": "false" if round_trip else "true",
-            "currency": "usd", "sorting": "price", "direct": "false", "limit": 100, "page": 1,
-        }
-        if round_trip:
-            params["return_at"] = request.return_date.strftime("%Y-%m")
         cheapest: dict[tuple, float] = {}
-        for fare in self._query(params):
-            try:
-                out = datetime.fromisoformat(fare["departure_at"]).date()
-                back = datetime.fromisoformat(fare["return_at"]).date() if round_trip else None
-                price = float(fare["price"])
-            except (KeyError, TypeError, ValueError):
-                continue
-            if out < datetime.now(timezone.utc).date() or (back is not None and back < out):
-                continue
-            if (out, back) not in cheapest or price < cheapest[(out, back)]:
-                cheapest[(out, back)] = price
+
+        def offer(pair: tuple, price: float) -> None:
+            if pair not in cheapest or price < cheapest[pair]:
+                cheapest[pair] = price
+
+        if not round_trip:
+            for day, price in self._cheapest_by_day(request.origin_code, request.destination_code, request.departure_date).items():
+                offer((day, None), price)
+        else:
+            if not _too_long(request):
+                params = {**self._month_params(request.origin_code, request.destination_code, request.departure_date),
+                          "one_way": "false", "return_at": request.return_date.strftime("%Y-%m")}
+                for fare in self._query(params):
+                    try:
+                        out = datetime.fromisoformat(fare["departure_at"]).date()
+                        back = datetime.fromisoformat(fare["return_at"]).date()
+                        price = float(fare["price"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    if out >= datetime.now(timezone.utc).date() and back >= out:
+                        offer((out, back), price)
+            # Days that have a one-way fare each way also work: the search pairs two one-way tickets.
+            outs = self._cheapest_by_day(request.origin_code, request.destination_code, request.departure_date)
+            backs = self._cheapest_by_day(request.destination_code, request.origin_code, request.return_date)
+            near_outs = sorted(outs, key=lambda d: abs((d - request.departure_date).days))[:3]
+            near_backs = sorted(backs, key=lambda d: abs((d - request.return_date).days))[:3]
+            for out in near_outs:
+                for back in near_backs:
+                    if back > out:
+                        offer((out, back), outs[out] + backs[back])
 
         def distance(pair: tuple) -> int:
             out, back = pair
