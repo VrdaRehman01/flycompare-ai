@@ -76,6 +76,9 @@ GitHub Actions runs the backend and frontend suites on every push.
 Free deployment on Vercel (site), Render (API), Neon (PostgreSQL) and Brevo (email): see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Data sources and credits
-Fares: Aviasales via Travelpayouts (optionally Duffel). Airports: [OurAirports](https://ourairports.com/data/) (public domain) with timezones from mwgg/Airports (MIT). Weather: [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Photos and summaries: Wikipedia / Wikimedia Commons under their stated free licences, credited on each image. Exchange rates: ECB via Frankfurter, plus ExchangeRate-API for other currencies. Map: Natural Earth.
+Fares: Aviasales via Travelpayouts (optionally Duffel). Airports: [OurAirports](https://ourairports.com/data/) (public domain) with timezones from mwgg/Airports (MIT). Weather: [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Photos and summaries: Wikipedia / Wikimedia Commons under their stated free licences, credited on each image. Exchange rates: ECB via [Frankfurter](https://frankfurter.dev), plus [Rates By Exchange Rate API](https://www.exchangerate-api.com) for other currencies. Map: [Natural Earth](https://www.naturalearthdata.com) (public domain). Airline names and logos are trademarks of their respective airlines.
 
 FlyCompare compares fares; it does not sell or issue tickets.
+
+## License
+The code is released under the [MIT License](LICENSE). © 2026 Warda Rehman. The data sources above keep their own licences and terms.
