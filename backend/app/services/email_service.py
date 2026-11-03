@@ -11,6 +11,8 @@ import ssl
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
 
+import httpx
+
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -24,8 +26,13 @@ class EmailDeliveryFailed(Exception):
     """The SMTP server could not be reached or refused the message."""
 
 
+BREVO_URL = "https://api.brevo.com/v3/smtp/email"
+
+
 def is_configured() -> bool:
     s = get_settings()
+    if s.email_provider.strip().lower() == "brevo":
+        return bool(s.brevo_api_key and s.email_from)
     return bool(s.smtp_host and s.smtp_username and s.smtp_password)
 
 
@@ -33,6 +40,33 @@ def send(to: str, subject: str, text: str, html: str | None = None) -> None:
     settings = get_settings()
     if not is_configured():
         raise EmailNotConfigured("Email is not configured on this server.")
+    if settings.email_provider.strip().lower() == "brevo":
+        _send_brevo(to, subject, text, html)
+        return
+    _send_smtp(to, subject, text, html)
+
+
+def _send_brevo(to: str, subject: str, text: str, html: str | None = None) -> None:
+    """Brevo's HTTPS API: works on hosts that block outbound SMTP ports (e.g. free web services)."""
+    settings = get_settings()
+    payload = {
+        "sender": {"name": settings.email_from_name, "email": settings.email_from},
+        "to": [{"email": to}], "subject": subject, "textContent": text,
+        **({"htmlContent": html} if html else {}),
+    }
+    try:
+        with httpx.Client(timeout=settings.email_timeout_seconds) as client:
+            response = client.post(BREVO_URL, json=payload, headers={"api-key": settings.brevo_api_key or "", "accept": "application/json"})
+    except httpx.HTTPError as exc:
+        logger.warning("Email delivery failed: %s", exc.__class__.__name__)
+        raise EmailDeliveryFailed("The email could not be sent.") from exc
+    if response.status_code >= 300:
+        logger.warning("Email delivery refused by Brevo: HTTP %s", response.status_code)
+        raise EmailDeliveryFailed("The email could not be sent.")
+
+
+def _send_smtp(to: str, subject: str, text: str, html: str | None = None) -> None:
+    settings = get_settings()
     sender = settings.email_from or settings.smtp_username
     message = EmailMessage()
     message["From"] = formataddr((settings.email_from_name, sender))

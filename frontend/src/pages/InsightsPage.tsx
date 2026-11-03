@@ -68,7 +68,7 @@ export function InsightsPage({ historyVersion, onSearchRoute }: { historyVersion
 
       {data && t && (
         <div className={loading ? 'is-refreshing' : ''}>
-          {mix.length > 0 && <p className="data-mix">Searches in this period by data source: {mix.map(([s, n]) => <span key={s}><StatusPill status={s} /> {n}</span>)} — test and demo searches are developer data, not real market activity. Searches are not bookings.</p>}
+          {mix.length > 0 && <p className="data-mix">Searches in this period by data source: {mix.map(([s, n]) => <span key={s}><StatusPill status={s} /> {n}</span>)} — {mix.some(([s]) => s === 'test' || s === 'demo') ? 'test and demo searches are developer data, not real market activity. ' : ''}Searches are not bookings.</p>}
           <div className="kpi-grid">
             <Kpi icon={<Search size={18} />} label={`Searches · ${rangeLabel}`} value={t.period_searches} note={`${t.all_time_searches} all time`} />
             <Kpi icon={<Globe2 size={18} />} label="Unique destinations" value={t.unique_destinations} note={`${plural(t.unique_routes, 'distinct route')}`} />

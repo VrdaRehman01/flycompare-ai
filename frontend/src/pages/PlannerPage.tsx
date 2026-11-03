@@ -41,7 +41,8 @@ export function PlannerPage({ location, origin, onSearchRoute }: { location?: st
     try {
       setPlan(await api<Plan>('/api/planner/plan', { method: 'POST', body: { location: trip.destination.code, start: trip.start, end: trip.end, travellers: trip.adults + trip.children, interests, pace, budget } }));
       if (updating) toast('success', 'Plan updated with your new choices.');
-      window.setTimeout(() => document.getElementById('plan-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+      // Bring the itinerary into view after a button press; a plan built on arrival leaves the page where it is.
+      if (e) window.setTimeout(() => document.getElementById('plan-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
     } catch (err) { setError(errorText(err)); } finally { setBusy(false); }
   };
   useEffect(() => { if (location && trip.destination && !plan) void make(); }, [trip.destination?.code]); // eslint-disable-line react-hooks/exhaustive-deps

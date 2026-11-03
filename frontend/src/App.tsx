@@ -9,6 +9,7 @@ import { navigate, readSession, useRoute, writeSession, type Route } from './lib
 import { Loading } from './components/ui';
 import type { Airport, AirportRef, Flight, SearchForm, SearchResponse, SearchState, TripType } from './lib/types';
 import { emptyForm, isCurrentForm, searchBody } from './lib/validation';
+import { AboutPage } from './pages/AboutPage';
 import { AccountPage } from './pages/AccountPage';
 import { CarsPage } from './pages/CarsPage';
 import { DealsPage } from './pages/DealsPage';
@@ -60,15 +61,28 @@ function Shell() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
-  const [apiProblem, setApiProblem] = useState<'outdated' | 'unreachable' | null>(null);
+  const [apiProblem, setApiProblem] = useState<'outdated' | 'unreachable' | 'waking' | null>(null);
   const inFlight = useRef<AbortController | null>(null);
   const update = useCallback((p: Partial<SearchForm>) => setForm((f) => ({ ...f, ...p })), []);
 
   // Detect a missing or outdated API server instead of failing later with "Not Found".
   useEffect(() => {
-    api<{ api_version: string }>('/api/meta')
-      .then((m) => setApiProblem(m.api_version < REQUIRED_API ? 'outdated' : null))
-      .catch((err) => setApiProblem((err as { status?: number }).status === 404 ? 'outdated' : 'unreachable'));
+    let live = true, tries = 0, woke = false;
+    const check = () => api<{ api_version: string }>('/api/meta')
+      .then((m) => {
+        if (!live) return;
+        // Requests made while the server slept failed; start fresh now that it answers.
+        if (woke) { window.location.reload(); return; }
+        setApiProblem(m.api_version < REQUIRED_API ? 'outdated' : null);
+      })
+      .catch((err) => {
+        if (!live) return;
+        if ((err as { status?: number }).status === 404) { setApiProblem('outdated'); return; }
+        // Free hosting puts the API to sleep when idle; keep trying for about a minute while it wakes.
+        if (tries++ < 8) { woke = true; setApiProblem('waking'); window.setTimeout(check, 8000); } else setApiProblem('unreachable');
+      });
+    void check();
+    return () => { live = false; };
   }, []);
 
   // Keep the form's departure airport in sync with the remembered/detected one.
@@ -171,6 +185,7 @@ function Shell() {
     case 'tours': page = <ToursPage key={route.location ?? ''} kind={route.kind} location={route.location} />; break;
     case 'planner': page = <PlannerPage key={route.location ?? ''} location={route.location} origin={origin} onSearchRoute={searchRoute} />; break;
     case 'guides': page = <GuidesPage location={route.location} origin={origin} onSearchRoute={searchRoute} />; break;
+    case 'about': page = <AboutPage />; break;
     default:
       page = (
         <HomePage form={form} update={update} onOriginChange={(a: AirportRef | null) => { departure.setOrigin(a); update({ origin: a }); }} onSearch={runSearch} loading={loading} error={error}
@@ -184,12 +199,14 @@ function Shell() {
       <a className="skip-link" href="#main">Skip to content</a>
       <Header route={route} />
       {apiProblem && (
-        <div className="api-banner" role="alert">
-          <ServerCrash size={16} />
-          {apiProblem === 'outdated'
+        <div className={`api-banner ${apiProblem === 'waking' ? 'waking' : ''}`} role={apiProblem === 'waking' ? 'status' : 'alert'}>
+          {apiProblem === 'waking' ? <span className="spinner dark" /> : <ServerCrash size={16} />}
+          {apiProblem === 'waking'
+            ? <span>Waking up the server: the free hosting pauses it when nobody is using it. This can take up to a minute…</span>
+            : apiProblem === 'outdated'
             ? <span>The FlyCompare API server is running an older version, so sign-in, insights and airport search are unavailable. Restart the backend (see README → Running locally).</span>
-            : <span>Can’t reach the FlyCompare API server. Check that the backend is running on port 8000.</span>}
-          <button className="link-btn small" onClick={() => window.location.reload()}><RefreshCw size={13} /> Retry</button>
+            : <span>Can’t reach the FlyCompare server right now. Please try again in a moment. (Running locally? Start the backend on port 8000.)</span>}
+          {apiProblem !== 'waking' && <button className="link-btn small" onClick={() => window.location.reload()}><RefreshCw size={13} /> Retry</button>}
         </div>
       )}
       <main id="main">{page}</main>
@@ -198,7 +215,8 @@ function Shell() {
         <div className="footer-inner">
           <a className="brand" href="#/"><span className="brand-mark"><Plane size={16} /></span><span>FlyCompare <b>AI</b></span></a>
           <p>Compare complete journeys. FlyCompare compares offers; it does not sell or issue tickets.</p>
-          <span>Airport data: OurAirports · Map: Natural Earth · © {new Date().getFullYear()} FlyCompare AI</span>
+          <span className="footer-links"><a href="#/about">How it's built</a><a href="https://github.com/VrdaRehman01/flycompare-ai" target="_blank" rel="noreferrer noopener">GitHub</a></span>
+          <span>Fares: Aviasales · Airports: OurAirports · Map: Natural Earth · © {new Date().getFullYear()} FlyCompare AI</span>
         </div>
       </footer>
     </div>

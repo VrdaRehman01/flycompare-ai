@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 export type TourKind = 'group' | 'private';
 export type GroundTab = 'rental' | 'transfers';
 export type Route =
-  | { page: 'home' } | { page: 'results' } | { page: 'details' } | { page: 'insights' }
+  | { page: 'home' } | { page: 'results' } | { page: 'details' } | { page: 'insights' } | { page: 'about' }
   | { page: 'destinations' } | { page: 'deals' } | { page: 'account'; tab: AccountTab }
   | { page: 'stays'; location?: string } | { page: 'packages'; location?: string }
   | { page: 'cars'; tab: GroundTab; location?: string } | { page: 'tours'; kind: TourKind; location?: string }
@@ -22,6 +22,7 @@ export function parseHash(hash: string): Route {
     case 'results': return { page: 'results' };
     case 'flight': return { page: 'details' };
     case 'insights': return { page: 'insights' };
+    case 'about': return { page: 'about' };
     case 'destinations': return { page: 'destinations' };
     case 'deals': return { page: 'deals' };
     case 'account': return { page: 'account', tab: ACCOUNT_TABS.includes(sub as AccountTab) ? (sub as AccountTab) : 'profile' };

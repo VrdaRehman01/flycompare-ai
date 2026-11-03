@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { BarChart3, BellRing, BookOpen, Bookmark, CarFront, Check, ChevronDown, Globe2, Heart, History, KeyRound, LogIn, LogOut, Mail, Menu, Monitor, Moon, Plane, Settings, Sun, User as UserIcon, UserPlus, UserRound, Users, Wand2, X } from 'lucide-react';
+import { BarChart3, BellRing, BookOpen, Bookmark, CarFront, Check, ChevronDown, Globe2, Heart, History, Info, KeyRound, LogIn, LogOut, Mail, Menu, Monitor, Moon, Plane, Settings, Sun, User as UserIcon, UserPlus, UserRound, Users, Wand2, X } from 'lucide-react';
 import { errorText } from '../lib/api';
 import { useFeatures, type DemoService } from '../lib/features';
 import { navigate, type Route } from '../lib/router';
@@ -57,8 +57,9 @@ export function Header({ route }: { route: Route }) {
     { route: { page: 'tours', kind: 'private' }, label: 'Private tours', hint: 'Your own guide and car', icon: <UserRound size={15} />, key: 'tours-private', needs: 'tours' },
     { route: { page: 'cars', tab: 'transfers' }, label: 'Airport transfers', hint: 'Airport ↔ city rides', icon: <CarFront size={15} />, key: 'transfers', needs: 'transfers' },
     ...(travelServices ? [{ route: { page: 'insights' } as Route, label: 'Insights', hint: 'Search and fare analytics', icon: <BarChart3 size={15} />, key: 'insights' }] : []),
+    { route: { page: 'about' }, label: "How it's built", hint: 'Architecture and data sources', icon: <Info size={15} />, key: 'about' },
   ]);
-  const moreActive = active === 'planner' || active === 'guides' || (travelServices && active === 'insights');
+  const moreActive = active === 'planner' || active === 'guides' || active === 'about' || (travelServices && active === 'insights');
   const themeIcon = themePref === 'system' ? <Monitor size={16} /> : theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />;
   const themes: { value: ThemePreference; label: string; icon: ReactNode }[] = [
     { value: 'light', label: 'Light', icon: <Sun size={15} /> }, { value: 'dark', label: 'Dark', icon: <Moon size={15} /> }, { value: 'system', label: 'System', icon: <Monitor size={15} /> },

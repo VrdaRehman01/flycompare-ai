@@ -1,0 +1,46 @@
+# Render Blueprint for the FlyCompare AI API (free web service).
+# Render → New → Blueprint → pick this repository. Values marked `sync: false` are asked
+# for once in the Render dashboard and never stored in git. See docs/DEPLOYMENT.md.
+services:
+  - type: web
+    name: flycompare-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # --proxy-headers: behind Vercel and Render, rate limits must use the visitor's IP.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL          # Neon connection string (postgresql://…?sslmode=require)
+        sync: false
+      - key: APP_PUBLIC_URL        # e.g. https://flycompare-ai.vercel.app
+        sync: false
+      - key: CORS_ORIGINS          # JSON list, e.g. ["https://flycompare-ai.vercel.app"]
+        sync: false
+      - key: FLIGHT_PROVIDER
+        value: travelpayouts
+      - key: TRAVELPAYOUTS_TOKEN
+        sync: false
+      - key: TRAVELPAYOUTS_MARKER
+        sync: false
+      # Free Render services block SMTP ports, so email goes through Brevo's HTTPS API.
+      - key: EMAIL_PROVIDER
+        value: brevo
+      - key: BREVO_API_KEY
+        sync: false
+      - key: EMAIL_FROM            # the sender address verified in Brevo
+        sync: false
+      - key: WIKIMEDIA_USER_AGENT  # include a contact, e.g. FlyCompareAI/1.0 (you@example.com)
+        sync: false
+      - key: ALERTS_CRON_TOKEN     # copy this generated value into the GitHub secret of the same name
+        generateValue: true

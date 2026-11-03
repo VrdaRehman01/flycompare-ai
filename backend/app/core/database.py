@@ -8,7 +8,17 @@ from app.core.config import REPO_ROOT, get_settings
 
 
 settings = get_settings()
-url = make_url(settings.database_url)
+
+
+def normalise_database_url(raw: str) -> str:
+    """Accept URLs as hosting providers print them (postgres://, postgresql://) and use psycopg 3."""
+    for prefix in ("postgres://", "postgresql://"):
+        if raw.startswith(prefix):
+            return "postgresql+psycopg://" + raw[len(prefix):]
+    return raw
+
+
+url = make_url(normalise_database_url(settings.database_url))
 
 if url.drivername.startswith("sqlite") and url.database not in (None, "", ":memory:"):
     # Anchor a relative SQLite file to the repository root so the same

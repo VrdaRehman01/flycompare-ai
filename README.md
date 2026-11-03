@@ -1,78 +1,81 @@
 # FlyCompare AI
 
-Flight comparison and travel decision support. Searches real provider offers (Duffel), compares complete itineraries, keeps per-user saved flights and history, and builds insights only from genuine stored searches.
+**Compare real flight fares, see how they change, and get emailed when your trip gets cheaper.**
+A full-stack portfolio project: React + TypeScript frontend, FastAPI backend, PostgreSQL, real fare data and a strict rule that nothing on screen is invented.
 
-FlyCompare compares offers. It does not sell or issue tickets.
+**Live demo:** _coming soon_ · **Case study:** the in-app [How it's built](#how-its-built) page
 
-## Stack
-- Frontend: React 18, TypeScript, Vite, Recharts, Vitest
-- Backend: FastAPI, Pydantic Settings, SQLAlchemy (SQLite locally, PostgreSQL supported)
-- Provider: Duffel (test or live token), or a mock provider for development
-- ML: optional fare-estimate model from `ml/` (read-only in the API)
+![Home page](docs/screenshots/home.png)
 
-## Data sources
-- **Airports** — `backend/app/data/airports_global.json`, ~4,000 airports with scheduled passenger service, built from [OurAirports](https://ourairports.com/data/) (public domain) with timezones from [mwgg/Airports](https://github.com/mwgg/Airports) (MIT). Rebuild with `backend/scripts/build_airport_dataset.py` (instructions in the script).
-- **Map** — Natural Earth country shapes (public domain, via the `world-atlas` package) rendered with MapLibre GL. No tile service or API key.
-- **Destination photos** — the lead image of the city's English Wikipedia article (accepted only when the article's coordinates match the destination), otherwise a matching view found by searching Wikimedia Commons. Only free licences are used (CC0 / CC BY / CC BY-SA / public domain) and every photo is credited with author and licence; when no suitable photo exists the generated skyline illustration is shown. Lookups run on the server, are batched, and are cached in `destination_images` (photos 30 days, "no photo" 7 days; network errors and rate limits are never cached). **Set `WIKIMEDIA_USER_AGENT` with a contact URL or email** — Wikimedia refuses anonymous clients. To fill the cache for all ~1,100 cities ahead of time: `cd backend && python scripts/warm_destination_images.py`.
-- **Exchange rates** — ECB reference rates via Frankfurter.
+## Highlights
+- **Real fares.** Prices come from the Aviasales Data API (fares real travellers found in the last few days) or, optionally, Duffel's live offers. Every price is labelled **Live**, **Recent fare**, **Test** or **Demo**, and the app never fills gaps with made-up numbers.
+- **Sign in with an emailed code** or a password. Codes are HMAC-hashed, single-use, expire in 10 minutes, are rate-limited, and responses never reveal whether an email is registered.
+- **Price alerts.** Set a target price on any search; a background checker re-searches every few hours and emails you once per new low, with the booking link.
+- **Insights from real searches.** Activity, popular routes, airlines, fares and price trends computed from stored searches; a trend is only drawn once there is enough real data.
+- **Travel guides and a trip planner** built from Wikipedia, a year of Open-Meteo weather history ("best months to visit") and curated sights, with a day-by-day schedule and budget.
+- **Local currency** detected from the device timezone (no location prompt), with ECB reference rates.
+- **Fare model.** A log-ridge regression trained on 3.3M fare observations, shown only as a labelled estimate inside its training range.
 
-## Features
-- **Search** (no account needed): global airport autocomplete by city, airport name, IATA/ICAO code, metro code (LON, NYC) or country, grouped by city; nearest-airport suggestion from the browser location (asked only when the visitor chooses it; coordinates are rounded to ~1 km and never stored); round trip, one way and multi-city (up to 4 flights); calendar date picker; adults, children (with ages 2–17) and lap infants; cabin class. Validation on client and server.
-- **Destination discovery**: “Explore from <your airport>” with an interactive world map and 1,100+ destination cities, filterable by region, theme, distance and routes seen in searches. Routes are only marked “seen” when a FlyCompare search returned offers; everything else is labelled a suggestion.
-- **Results**: recommended / cheapest / fastest; filters for stops, airlines, price, total journey time, baggage and refundability (when supplied); expandable itineraries; "Clear all". The recommended score is 60% price + 30% total journey time + 10% stops, min–max normalised across the shown results; the breakdown is visible on every card.
-- **Details**: every segment, connection airport and layover, cabin, baggage per type, refund and change conditions with fees exactly as supplied. Anything the provider does not supply is shown as "Not provided".
-- **Accounts**: register, sign in/out, profile, change email (password required), change password (signs out other devices), preferences, saved flights, favourite destinations, recently viewed, search history, account deletion with confirmation.
-- **Insights**: totals, activity over time, top destinations and routes, airlines in returned offers, cabin and traveller mix, travel-date heatmap, returned fares grouped per currency and data source; 7 / 30 / 90 days / all time; "My searches" or anonymous "All searches".
-- **Price history**: every Duffel offer price is stored as an observation. A trend is shown only after ≥3 searches of the same trip on ≥2 different days. Demo prices are never stored.
-- **Model estimate**: the promoted `ml/models/fare_log_ridge_model.joblib` is shown as a labelled prediction (historical monthly median one-way fare, EUR), only when the route and month are inside its training data.
-- **Currency**: prices always show the provider's original amount; an optional display currency adds an approximate conversion using ECB reference rates. Currencies without a reference rate (for example PKR, QAR, AED) are shown in their original form.
-- **Themes**: light, dark and system, persisted per browser and optionally in account preferences.
+| Trip planner | Travel guide |
+|---|---|
+| ![Trip planner](docs/screenshots/trip-planner.png) | ![Travel guide](docs/screenshots/travel-guide.png) |
+| **How it's built** | **Insights** |
+| ![How it's built](docs/screenshots/how-its-built.png) | ![Insights](docs/screenshots/insights.png) |
 
-## Data labels
-Every offer and stored record carries `data_status`: `live`, `test` (Duffel sandbox; not real prices or bookable) or `demo` (simulated). The UI labels all three. Searches recorded before this release show "Source not recorded".
+## How it's built
+```mermaid
+flowchart LR
+  B[Browser<br/>React + TypeScript] -- /api --> V[Vercel<br/>static site + rewrite]
+  V --> A[FastAPI on Render]
+  A --> D[(PostgreSQL<br/>Neon)]
+  A --> F[Aviasales Data API<br/>Duffel optional]
+  A --> E[Brevo / SMTP<br/>codes & alerts]
+  A --> R[Open-Meteo · Wikipedia<br/>ECB rates]
+  G[GitHub Actions<br/>every 3 h] -- checks price alerts --> A
+```
 
-## Running locally
-Backend:
+- **Frontend:** React 18, TypeScript, Vite, Recharts, MapLibre GL; hash routing; typed API client.
+- **Backend:** FastAPI, Pydantic, SQLAlchemy; providers behind one interface (`backend/app/providers`), business logic in services, versioned migrations applied on start-up.
+- **Data honesty:** demo and sandbox providers are refused outside development; currencies and data sources are never mixed in one statistic; services with no real inventory (hotels, cars, tours) are switched off rather than faked.
+- **Security:** scrypt passwords, server-side sessions stored as SHA-256 hashes in HttpOnly cookies, CSRF header on state-changing requests, per-user scoping of every account endpoint, rate limits, no secrets in the repository.
+
+## Run it locally
+Requirements: Python 3.12+, Node 20+.
+
 ```bash
+# backend
 cd backend
 python -m venv .venv
-# Windows: .venv\Scripts\Activate.ps1; macOS/Linux: source .venv/bin/activate
+# Windows: .venv\Scripts\Activate.ps1   macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-# Optional, enables model estimates:
-pip install -r ../ml/requirements.txt
-uvicorn app.main:app --reload --port 8000   # from backend/; or from the repo root: uvicorn app.main:app --app-dir backend --reload --port 8000
-```
-On start-up the API creates missing tables and applies versioned migrations (`backend/app/core/migrations.py`). Existing search history is kept; airport codes are backfilled from labels such as "Karachi (KHI)".
+cp ../.env.example .env        # then fill in the values you need (see below)
+uvicorn app.main:app --reload --port 8000
 
-Frontend:
-```bash
+# frontend (second terminal)
 cd frontend
 npm install
-npm run dev            # http://localhost:5173, proxies /api to 127.0.0.1:8000
+npm run dev                    # http://localhost:5173 (proxies /api to the backend)
 ```
-Set `FLYCOMPARE_API_TARGET` to proxy to a different backend.
 
-Configuration lives in `.env` (see `.env.example`). Never commit `.env`. The Duffel token and session handling stay on the server; the browser only receives an HttpOnly session cookie.
+Without any keys the app runs with simulated, clearly labelled demo flights (`FLIGHT_PROVIDER=mock`). For real data:
+- **Fares:** free Travelpayouts account → join Aviasales → API token: `FLIGHT_PROVIDER=travelpayouts`, `TRAVELPAYOUTS_TOKEN`, `TRAVELPAYOUTS_MARKER`.
+- **Email codes and alerts:** a Gmail App Password (`SMTP_*`) or a Brevo API key (`EMAIL_PROVIDER=brevo`).
+- **Photos:** set `WIKIMEDIA_USER_AGENT` with a contact address (Wikimedia requires it).
 
-## Database migrations
-Migrations run automatically when the API starts (`backend/app/core/migrations.py`, recorded in `schema_migrations`):
-- `0001` links searches to users and backfills airport codes;
-- `0002` adds child/infant counts and multi-city legs to searches and connection airports to fare observations.
-New tables (`users`, `user_sessions`, `saved_flights`, `favourite_destinations`, `recently_viewed_flights`, `fare_observations`, `destination_images`) are created automatically. Back up `flycompare.db` before upgrading production data.
-
-Run the backend with `--reload` during development so code changes take effect; the frontend shows a banner if the API server is outdated or unreachable.
+Every setting is documented in [`.env.example`](.env.example). SQLite is used locally; set `DATABASE_URL` to PostgreSQL in production.
 
 ## Tests
 ```bash
-cd backend && python -m pytest tests -q        # provider is forced to mock; no network calls
-cd ml && python -m pytest tests -q             # from the repository root: python -m pytest ml/tests
+cd backend && python -m pytest tests -q     # ~200 tests, offline: providers and email are stubbed
 cd frontend && npm test && npm run build
+cd ml && python -m pytest tests -q
 ```
+GitHub Actions runs the backend and frontend suites on every push.
 
-## Security notes
-- Passwords: salted scrypt hashes. Sessions: random tokens, stored only as SHA-256 hashes, HttpOnly + SameSite=Lax cookies (Secure outside development).
-- State-changing account/auth requests require an `X-Requested-With` header (CSRF protection together with the CORS allow-list).
-- Every account endpoint is scoped to the signed-in user; other users' records return 404.
-- Rate limits: auth 10/min, search 20/min, lookups 120/min per client (in-process; move to Redis for multi-process deployments).
+## Deploy
+Free deployment on Vercel (site), Render (API), Neon (PostgreSQL) and Brevo (email): see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-See `docs/REQUIREMENT_TRACEABILITY.md` for implementation status and known limitations.
+## Data sources and credits
+Fares: Aviasales via Travelpayouts (optionally Duffel). Airports: [OurAirports](https://ourairports.com/data/) (public domain) with timezones from mwgg/Airports (MIT). Weather: [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Photos and summaries: Wikipedia / Wikimedia Commons under their stated free licences, credited on each image. Exchange rates: ECB via Frankfurter, plus ExchangeRate-API for other currencies. Map: Natural Earth.
+
+FlyCompare compares fares; it does not sell or issue tickets.

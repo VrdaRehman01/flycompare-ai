@@ -62,8 +62,11 @@ class Settings(BaseSettings):
     # (the API refuses to start with this default outside development).
     secret_key: str = "dev-only-insecure-secret-change-me"
 
-    # Email delivery (sign-in and verification codes) over SMTP, e.g. Gmail with an App
-    # Password. Without SMTP_HOST, code sign-in reports itself unavailable.
+    # Email delivery (sign-in codes, price alerts). "smtp" (e.g. Gmail with an App Password)
+    # or "brevo" (HTTPS API: works on free hosts that block SMTP ports; needs BREVO_API_KEY
+    # and EMAIL_FROM set to a sender verified in Brevo). Unconfigured = code sign-in unavailable.
+    email_provider: str = "smtp"
+    brevo_api_key: str | None = None
     smtp_host: str = ""
     smtp_port: int = 587  # 587 = STARTTLS, 465 = SSL
     smtp_username: str = ""
