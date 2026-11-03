@@ -52,6 +52,7 @@ export function DetailsPage({ flight: f, query, hasResults }: { flight: Flight; 
   const [bags, setBags] = useState<Record<string, number>>({});
   const [seats, setSeats] = useState<SeatChoice[]>([]);
   const legs = legsOf(f);
+  const twoTickets = !!f.return_booking_url && legs.length === 2;
   const pax = query?.passengers ?? null;
   const paxText = pax ? passengerSummary(pax) : f.passenger_count ? `${f.passenger_count} passenger${f.passenger_count > 1 ? 's' : ''}` : 'travellers as searched';
   const stops = useItineraryStops(f);
@@ -94,10 +95,15 @@ export function DetailsPage({ flight: f, query, hasResults }: { flight: Flight; 
       <div className="details-layout">
         <div className="card details-card">
           <div className="details-head">
-            <AirlineLogo name={f.airline} size={56} src={f.airline_logo_url} />
+            {twoTickets && legs[0].airline_code !== legs[1].airline_code ? (
+              <span className="logo-pair">
+                <AirlineLogo name={legs[0].airline ?? f.airline} size={44} src={legs[0].airline_logo_url} />
+                <AirlineLogo name={legs[1].airline ?? f.airline} size={44} src={legs[1].airline_logo_url} />
+              </span>
+            ) : <AirlineLogo name={f.airline} size={56} src={f.airline_logo_url} />}
             <div className="details-title">
               <h1>{f.airline}</h1>
-              <small>{f.flight_number} · {cabinName} · {legs.length > 2 ? 'Multi-city' : legs.length > 1 ? 'Round trip' : 'One way'} · {durationLabel(totalDurationOf(f))} total flying time</small>
+              <small>{twoTickets ? `${new Set(legs.map((l) => l.airline)).size > 1 ? '2 airlines · ' : ''}2 separate tickets` : f.flight_number} · {cabinName} · {legs.length > 2 ? 'Multi-city' : legs.length > 1 ? 'Round trip' : 'One way'} · {durationLabel(totalDurationOf(f))} total flying time</small>
               <div className="details-tags">
                 <StatusPill status={f.data_status} />
                 <span className="badge soft">{f.provider} · retrieved {relativeTime(f.retrieved_at)}</span>
@@ -115,7 +121,7 @@ export function DetailsPage({ flight: f, query, hasResults }: { flight: Flight; 
               <section key={i} className="leg-card">
                 <div className="leg-card-head">
                   <span className="leg-icon">{i === 0 ? <PlaneTakeoff size={16} /> : <PlaneLanding size={16} />}</span>
-                  <div><b>{legs.length > 2 ? `Flight ${i + 1}` : legs.length > 1 ? (i === 0 ? 'Outbound flight' : 'Return flight') : 'Flight'}</b><small>{shortDate(leg.departing_at)} · {cityOf(leg.origin)} to {cityOf(leg.destination)}</small></div>
+                  <div><b>{legs.length > 2 ? `Flight ${i + 1}` : legs.length > 1 ? (i === 0 ? 'Outbound flight' : 'Return flight') : 'Flight'}</b><small>{shortDate(leg.departing_at)} · {cityOf(leg.origin)} to {cityOf(leg.destination)}{twoTickets && leg.airline ? ` · ${leg.airline}${leg.flight_number ? ` ${leg.flight_number}` : ''}` : ''}</small></div>
                   <button className="expand" onClick={() => setOpen(isOpen ? open.filter((x) => x !== i) : [...open, i])} aria-expanded={isOpen}>{isOpen ? 'Hide segments' : 'Show segments'} <ChevronDown size={14} className={isOpen ? 'flip' : ''} /></button>
                 </div>
                 <div className="leg-overview">

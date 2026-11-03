@@ -15,6 +15,7 @@ export type Segment = {
 };
 export type Itinerary = {
   origin: string; destination: string; departing_at: string; arriving_at: string; duration_minutes?: number | null; stops: number; segments: Segment[];
+  airline?: string | null; airline_code?: string | null; airline_logo_url?: string | null; flight_number?: string | null;
   fare_brand_name?: string | null; priority_check_in?: boolean | null; priority_boarding?: boolean | null; advance_seat_selection?: boolean | null;
 };
 export type Baggage = { baggage_type: string; quantity?: number | null; weight?: number | null; weight_unit?: string | null; passenger_type?: string | null; passenger_id?: string | null; slice_index?: number | null };

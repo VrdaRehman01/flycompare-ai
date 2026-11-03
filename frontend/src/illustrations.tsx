@@ -341,7 +341,10 @@ const airlineColors: Record<string, string> = {
 
 export function AirlineLogo({ name, size = 40, src, fallbacks = [] }: { name: string; size?: number; src?: string | null; fallbacks?: string[] }) {
   // Try each candidate URL in turn; a clearly generic monogram only when none loads.
-  const candidates = [src, ...fallbacks].filter((u): u is string => !!u);
+  // Duffel's logo set has gaps; for its URLs also try other sources for the same airline code.
+  const code = src?.match(/full-color-logo\/([A-Z0-9]{2})\.svg$/)?.[1];
+  const derived = code ? [`https://images.kiwi.com/airlines/64/${code}.png`, `https://pics.avs.io/120/120/${code}.png`] : [];
+  const candidates = [src, ...fallbacks, ...derived].filter((u): u is string => !!u);
   const [failed, setFailed] = useState(0);
   const key = name.trim().toLowerCase();
   const current = candidates[failed];

@@ -30,7 +30,9 @@ from app.services.airport_service import get_airport
 logger = logging.getLogger(__name__)
 
 AIRLINES_URL = "https://api.travelpayouts.com/data/en/airlines.json"
-LOGO_URL = "https://pics.avs.io/120/120/{code}.png"
+# Duffel's logos are current (pics.avs.io still shows Estonian Air for SalamAir's reused "OV");
+# the browser falls back to other sources when Duffel has no logo for a code.
+LOGO_URL = "https://assets.duffel.com/img/airlines/for-light-background/full-color-logo/{code}.svg"
 BOOKING_HOST = "https://www.aviasales.com"
 CACHE_SECONDS = 15 * 60  # Travelpayouts asks partners to cache Data API answers
 MAX_TRIP_DAYS = 30  # the Data API answers HTTP 400 when the return is later than this
@@ -184,6 +186,7 @@ class TravelpayoutsFlightProvider:
                     "itineraries": [*out.itineraries, *back.itineraries],
                     "price": round(out.price + back.price, 2),
                     "airline": out.airline if out.airline == back.airline else f"{out.airline} + {back.airline}",
+                    "flight_number": f"{out.flight_number} + {back.flight_number}",
                     "return_booking_url": back.booking_url,
                     "sold_by": sellers,
                     "disclaimer": (
@@ -275,8 +278,13 @@ class TravelpayoutsFlightProvider:
         code = (fare.get("airline") or "").upper()
         out_minutes = int(fare.get("duration_to") or fare.get("duration") or 0)
         arriving = _local(departing + timedelta(minutes=out_minutes), destination)
+        airline = self._airline_name(code) if code else None
+        flight_number = f"{code} {fare['flight_number']}".strip() if fare.get("flight_number") else code
+        # The fare's airline sells both directions; its flight number is the outbound's first flight.
+        carrier = {"airline": airline, "airline_code": code or None, "airline_logo_url": LOGO_URL.format(code=code) if code else None}
         itineraries = [FlightItinerary(origin=origin, destination=destination, departing_at=departing, arriving_at=arriving,
-                                       duration_minutes=out_minutes or None, stops=int(fare.get("transfers") or 0))]
+                                       duration_minutes=out_minutes or None, stops=int(fare.get("transfers") or 0),
+                                       flight_number=flight_number or None, **carrier)]
         if fare.get("return_at"):
             try:
                 back_departing = datetime.fromisoformat(fare["return_at"])
@@ -284,7 +292,7 @@ class TravelpayoutsFlightProvider:
                 itineraries.append(FlightItinerary(
                     origin=destination, destination=origin, departing_at=back_departing,
                     arriving_at=_local(back_departing + timedelta(minutes=back_minutes), origin),
-                    duration_minutes=back_minutes or None, stops=int(fare.get("return_transfers") or 0)))
+                    duration_minutes=back_minutes or None, stops=int(fare.get("return_transfers") or 0), **carrier))
             except (TypeError, ValueError):
                 pass
         # Only a path on the booking site is accepted: "//evil.example" or "@evil.example" would
@@ -298,10 +306,10 @@ class TravelpayoutsFlightProvider:
             provider=self.name,
             data_status="recent",
             retrieved_at=retrieved,
-            airline=self._airline_name(code) if code else "Airline not supplied",
-            airline_code=code or None,
-            airline_logo_url=LOGO_URL.format(code=code) if code else None,
-            flight_number=f"{code} {fare['flight_number']}".strip() if fare.get("flight_number") else code,
+            airline=airline or "Airline not supplied",
+            airline_code=carrier["airline_code"],
+            airline_logo_url=carrier["airline_logo_url"],
+            flight_number=flight_number,
             origin=origin,
             destination=destination,
             departure_date=departing.date(),

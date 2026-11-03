@@ -174,6 +174,11 @@ class FlightItinerary(BaseModel):
     arriving_at: datetime
     duration_minutes: int | None = None
     stops: int = 0
+    # Who flies this direction, when the provider gives it per direction rather than per segment.
+    airline: str | None = None
+    airline_code: str | None = None
+    airline_logo_url: str | None = None
+    flight_number: str | None = None
     segments: list[FlightSegment] = Field(default_factory=list)
     fare_brand_name: str | None = None
     # Slice-level perks as supplied by the provider; None when not supplied.

@@ -386,6 +386,11 @@ main { flex: 1; }
 
 .airline-logo.has-img img { width: 100%; height: 100%; object-fit: contain; }
 
+/* Two airlines on one trip (two separate tickets): logos overlap slightly. */
+.logo-pair { display: inline-flex; flex: none; }
+
+.logo-pair .airline-logo + .airline-logo { margin-left: -10px; margin-top: 12px; box-shadow: 0 0 0 2px var(--surface), inset 0 0 0 1px var(--line); }
+
 .fc-legs { display: flex; flex-direction: column; gap: 10px; }
 
 .leg-row { position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; }

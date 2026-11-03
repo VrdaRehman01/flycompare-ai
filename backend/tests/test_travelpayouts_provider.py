@@ -59,7 +59,7 @@ def test_fares_are_mapped_with_local_times_booking_links_and_no_duplicates(provi
     assert [o.price for o in offers] == [390, 425]  # cheapest first; the dearer duplicate dropped
     pia = offers[1]
     assert pia.data_status == "recent" and pia.airline == "PIA" and pia.flight_number == "PK 203"
-    assert pia.airline_logo_url.endswith("/PK.png") and pia.sold_by == "Wingie"
+    assert pia.airline_logo_url.endswith("/PK.svg") and pia.sold_by == "Wingie"
     assert pia.booking_url == "https://www.aviasales.com/search/LHE0312DXB10121?t=abc&marker=799772"
     out, back = pia.itineraries
     # 13:40 in Lahore (+05:00) plus 230 minutes lands at 16:30 Dubai time (+04:00).

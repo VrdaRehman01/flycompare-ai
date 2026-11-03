@@ -76,7 +76,9 @@ export function FlightCard({ f, passengers, badge, score, saved, onSave, onSelec
   return (
     <article className={`card flight-card ${open ? 'expanded' : ''}`}>
       <div className="fc-body">
-        <div className="fc-airline"><AirlineLogo name={f.airline} src={f.airline_logo_url} /><div><b>{f.airline}</b><small>{f.flight_number}{brand ? ` · ${brand}` : ''}</small></div></div>
+        <div className="fc-airline">{f.return_booking_url && legs.length === 2 && legs[1].airline_code !== legs[0].airline_code
+          ? <span className="logo-pair"><AirlineLogo name={legs[0].airline ?? f.airline} size={28} src={legs[0].airline_logo_url} /><AirlineLogo name={legs[1].airline ?? f.airline} size={28} src={legs[1].airline_logo_url} /></span>
+          : <AirlineLogo name={f.airline} src={f.airline_logo_url} />}<div><b>{f.airline}</b><small>{f.flight_number}{brand ? ` · ${brand}` : ''}</small></div></div>
         <div className="fc-legs">{legs.map((leg, i) => <LegRow key={i} leg={leg} tag={legs.length === 2 ? (i === 0 ? 'OUT' : 'RET') : legs.length > 2 ? `FLIGHT ${i + 1}` : undefined} />)}</div>
         <div className="fc-price">
           <button className={`heart ${saved ? 'on' : ''}`} onClick={onSave} aria-pressed={saved} aria-label={saved ? 'Remove from saved flights' : 'Save flight'}><Heart size={16} /></button>
